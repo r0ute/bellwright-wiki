@@ -11,7 +11,6 @@ from categories import (
 from discover import discover_json
 from icons import build_icon_index, copy_icon, find_icon
 from markdown import write_generation_report, write_page
-from schemas.weapons import EQUIPMENT_FIELDS
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -143,7 +142,7 @@ def generate_equipment_item(
     if not cdo:
         raise ValueError(f"No CDO found: {path}")
 
-    properties = cdo["Properties"]
+    properties = cdo.get("Properties", {})
 
     name = asset_name(path, objects)
     category_name = category_name_for(properties, category_index) or "Uncategorized"
@@ -166,12 +165,13 @@ def generate_equipment_item(
         "path": path,
     }
 
-    row = {
-        field: extractor(properties, context)
-        for field, extractor in EQUIPMENT_FIELDS.items()
+    # Return minimal representation (properties + context); rendering will
+    # use schema-specific extractors to create final table rows.
+    return {
+        "properties": properties,
+        "context": context,
+        "Category": category_name,
     }
-    row["Category"] = category_name
-    return row
 
 
 def category_slug(value: str) -> str:
@@ -324,6 +324,7 @@ def main() -> None:
     print(f"Categories indexed: {len(category_index)}")
 
     equipment_items = []
+    equipment_raw: list[tuple[Path, dict]] = []
     scanned = 0
     category_pages: list[dict] = []
     seen_category_slugs: set[str] = set()
@@ -345,8 +346,13 @@ def main() -> None:
         if not isinstance(raw, list):
             raw = [raw]
 
-        if not find_cdo(raw):
+        cdo = find_cdo(raw)
+        if not cdo:
             continue
+
+        # store raw properties for schema inference
+        props = cdo.get("Properties", {})
+        equipment_raw.append((path, props))
 
         equipment_items.append(
             generate_equipment_item(
@@ -357,8 +363,139 @@ def main() -> None:
             )
         )
 
-    headers = list(EQUIPMENT_FIELDS)
+    # default headers fallback (used if no schema module found)
+    default_headers = ["Icon", "Name", "Category", "Price"]
     category_children, category_titles = build_category_hierarchy(ASSETS)
+
+    # Generate per-group schema files under generator/schemas by sampling a few
+    # items from each group. This writes new schema modules only when they do
+    # not already exist. A default fallback schema is created as well.
+    def pretty_label(key: str) -> str:
+        # Convert camel/Pascal/underscore keys to Title Case labels
+        import re
+
+        s = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", key)
+        s = s.replace("_", " ")
+        return s.strip().title()
+
+    def make_schema_module(slug: str, labels: list[str], keys: list[str]) -> str:
+        # Create a simple schema module text that defines EQUIPMENT_FIELDS
+        # using the common helpers.
+        lines = [
+            "from __future__ import annotations",
+            "from typing import Any",
+            "try:",
+            "    from generator.schemas.common import (",
+            "        FieldExtractor,",
+            "        extract_value,",
+            "        field,",
+            "    )",
+            "except ModuleNotFoundError:",
+            "    from schemas.common import (",
+            "        FieldExtractor,",
+            "        extract_value,",
+            "        field,",
+            "    )",
+            "",
+            "EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {",
+            "    \"Icon\": lambda _p, ctx: ctx['icon'],",
+            "    \"Name\": lambda _p, ctx: ctx['name'],",
+        ]
+
+        for label, key in zip(labels, keys):
+            # don't re-add Name/Icon
+            if label in ("Icon", "Name"):
+                continue
+            # use field extractor for the raw key
+            lines.append(f"    \"{label}\": field(\"{key}\"),")
+
+        lines.append("}")
+        return "\n".join(lines)
+
+    import os
+    schemas_dir = Path(__file__).resolve().parent / "schemas"
+    schemas_dir.mkdir(parents=True, exist_ok=True)
+
+    # ensure default fallback schema exists
+    default_path = schemas_dir / "default.py"
+    if not default_path.exists():
+        default_content = (
+            "from __future__ import annotations\n"
+            "from typing import Any\n"
+            "try:\n"
+            "    from generator.schemas.common import (\n"
+            "        FieldExtractor,\n"
+            "        extract_value,\n"
+            "        field,\n"
+            "    )\n"
+            "except ModuleNotFoundError:\n"
+            "    from schemas.common import (\n"
+            "        FieldExtractor,\n"
+            "        extract_value,\n"
+            "        field,\n"
+            "    )\n\n"
+            "EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {\n"
+            "    \"Icon\": lambda _p, ctx: ctx['icon'],\n"
+            "    \"Name\": lambda _p, ctx: ctx['name'],\n"
+            "    \"Category\": field('Category'),\n"
+            "    \"Price\": field('ExpectedPrice'),\n"
+            "}\n"
+        )
+        default_path.write_text(default_content, encoding="utf-8")
+
+    # For each group, sample up to 3 item property dicts and create a schema
+    for path in equipment_category_paths(ASSETS):
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        if not is_equipment_category_group(path):
+            continue
+
+        title = category_name_for_path(path)
+        if not title:
+            continue
+        key = normalize_category_key(title)
+        slug = category_slug(path.stem)
+
+        # collect up to 3 samples that belong to this group's scope
+        scope = category_row_scope(title, category_children, category_titles)
+        samples: list[dict] = []
+        for i_path, props in equipment_raw:
+            # find this item's category key
+            cat_name = category_name_for(props, category_index)
+            if not cat_name:
+                continue
+            if normalize_category_key(cat_name) in scope:
+                samples.append(props)
+            if len(samples) >= 3:
+                break
+
+        if not samples:
+            continue
+
+        # determine common property keys among samples (union)
+        union_keys: list[str] = []
+        seen_keys: set[str] = set()
+        for props in samples:
+            for k in props.keys():
+                if k in ("Name", "Icon", "Category"):
+                    continue
+                if k not in seen_keys:
+                    seen_keys.add(k)
+                    union_keys.append(k)
+        # limit to first 8 keys
+        chosen_keys = union_keys[:8]
+        labels = [pretty_label(k) for k in chosen_keys]
+
+        target_file = schemas_dir / f"{slug}.py"
+        if target_file.exists():
+            # do not overwrite existing schema files
+            continue
+
+        content = make_schema_module(slug, labels, chosen_keys)
+        target_file.write_text(content, encoding="utf-8")
 
     processed_keys: set[str] = set()
 
@@ -397,10 +534,13 @@ def main() -> None:
 
         # Build sections: if the group has child categories, emit only
         # the child-category tables. If the group has no children, emit a
-        # single table for the group (full scope).
-        sections: dict[str, list[dict]] = {}
+        # single table for the group (full scope). Sections map to
+        # (headers, rows) pairs so each child can have its own schema.
+        sections: dict[str, tuple[list[str], list[dict]]] = {}
 
         child_keys = sorted(category_children.get(key, set()), key=lambda k: category_titles.get(k, ""))
+
+        import importlib
 
         if child_keys:
             # Emit only child sections; do not include a group's own table.
@@ -416,12 +556,54 @@ def main() -> None:
                     continue
 
                 child_scope = category_row_scope(child_title, category_children, category_titles)
-                child_rows = [
-                    row for row in equipment_items
-                    if normalize_category_key(row["Category"]) in child_scope
+                child_items = [
+                    item for item in equipment_items
+                    if normalize_category_key(item["Category"]) in child_scope
                 ]
-                child_rows = sorted(child_rows, key=lambda row: str(row["Name"]).lower())
-                sections[child_title] = child_rows
+
+                # Select schema for this child: prefer generator.schemas.<slug>, else default
+                schema_mod = None
+                if child_path:
+                    child_slug = category_slug(child_path.stem)
+                    try:
+                        schema_mod = importlib.import_module(f"generator.schemas.{child_slug}")
+                    except Exception:
+                        schema_mod = None
+
+                if schema_mod is None:
+                    try:
+                        schema_mod = importlib.import_module("generator.schemas.default")
+                    except Exception:
+                        schema_mod = None
+
+                if schema_mod is not None:
+                    schema_fields = list(schema_mod.EQUIPMENT_FIELDS.keys())
+                    rendered_rows: list[dict] = []
+                    for item in child_items:
+                        props = item["properties"]
+                        ctx = item["context"]
+                        row = {}
+                        for field_name, extractor in schema_mod.EQUIPMENT_FIELDS.items():
+                            try:
+                                row[field_name] = extractor(props, ctx)
+                            except Exception:
+                                row[field_name] = "—"
+                        rendered_rows.append(row)
+                else:
+                    # fallback minimal
+                    schema_fields = default_headers
+                    rendered_rows = [
+                        {
+                            "Icon": item["context"]["icon"],
+                            "Name": item["context"]["name"],
+                            "Category": item.get("Category"),
+                            "Price": item["properties"].get("ExpectedPrice") or item["properties"].get("Price") or "—",
+                        }
+                        for item in child_items
+                    ]
+
+                rendered_rows = sorted(rendered_rows, key=lambda r: str(r.get("Name", "")).lower())
+                sections[child_title] = (schema_fields, rendered_rows)
                 processed_keys.add(child_key)
 
             # Mark the group as processed so it won't be emitted separately.
@@ -429,15 +611,50 @@ def main() -> None:
         else:
             # No child categories: emit a full-scope table for the group.
             group_scope = category_row_scope(title, category_children, category_titles)
-            group_rows = [
-                row for row in equipment_items
-                if normalize_category_key(row["Category"]) in group_scope
+            group_items = [
+                item for item in equipment_items
+                if normalize_category_key(item["Category"]) in group_scope
             ]
-            group_rows = sorted(group_rows, key=lambda row: str(row["Name"]).lower())
-            sections[title] = group_rows
+
+            # select schema for this group
+            schema_mod = None
+            try:
+                schema_mod = importlib.import_module(f"generator.schemas.{slug}")
+            except Exception:
+                try:
+                    schema_mod = importlib.import_module("generator.schemas.default")
+                except Exception:
+                    schema_mod = None
+
+            if schema_mod is not None:
+                schema_fields = list(schema_mod.EQUIPMENT_FIELDS.keys())
+            else:
+                schema_fields = default_headers
+
+            rendered_rows = []
+            for item in group_items:
+                props = item["properties"]
+                ctx = item["context"]
+                row = {}
+                if schema_mod is not None:
+                    for field_name, extractor in schema_mod.EQUIPMENT_FIELDS.items():
+                        try:
+                            row[field_name] = extractor(props, ctx)
+                        except Exception:
+                            row[field_name] = "—"
+                else:
+                    row["Icon"] = ctx["icon"]
+                    row["Name"] = ctx["name"]
+                    row["Category"] = item.get("Category")
+                    row["Price"] = props.get("ExpectedPrice") or props.get("Price") or "—"
+
+                rendered_rows.append(row)
+
+            rendered_rows = sorted(rendered_rows, key=lambda r: str(r.get("Name", "")).lower())
+            sections[title] = (schema_fields, rendered_rows)
             processed_keys.add(key)
 
-        total = sum(len(r) for r in sections.values())
+        total = sum(len(r) for _, r in sections.values())
         if slug not in seen_category_slugs:
             category_pages.append({"title": title, "slug": slug})
             seen_category_slugs.add(slug)
@@ -448,7 +665,7 @@ def main() -> None:
             description=(
                 f"{total} matching assets in the {title} category."
             ),
-            headers=headers,
+            headers=default_headers,
             sections=sections,
         )
 
@@ -474,11 +691,11 @@ def main() -> None:
 
         slug = category_slug(path.stem)
         scope = category_row_scope(title, category_children, category_titles)
-        rows = [
-            row for row in equipment_items
-            if normalize_category_key(row["Category"]) in scope
+        items = [
+            item for item in equipment_items
+            if normalize_category_key(item["Category"]) in scope
         ]
-        rows = sorted(rows, key=lambda row: str(row["Name"]).lower())
+        items = sorted(items, key=lambda item: str(item["context"]["name"]).lower())
 
         processed_keys.add(key)
 
@@ -486,20 +703,56 @@ def main() -> None:
             category_pages.append({"title": title, "slug": slug})
             seen_category_slugs.add(slug)
 
+        # select schema for this category
+        import importlib
+        schema_mod = None
+        try:
+            schema_mod = importlib.import_module(f"generator.schemas.{slug}")
+        except Exception:
+            try:
+                schema_mod = importlib.import_module("generator.schemas.default")
+            except Exception:
+                schema_mod = None
+
+        if schema_mod is not None:
+            schema_fields = list(schema_mod.EQUIPMENT_FIELDS.keys())
+            rendered_rows = []
+            for item in items:
+                props = item["properties"]
+                ctx = item["context"]
+                row = {}
+                for field_name, extractor in schema_mod.EQUIPMENT_FIELDS.items():
+                    try:
+                        row[field_name] = extractor(props, ctx)
+                    except Exception:
+                        row[field_name] = "—"
+                rendered_rows.append(row)
+        else:
+            schema_fields = default_headers
+            rendered_rows = [
+                {
+                    "Icon": item["context"]["icon"],
+                    "Name": item["context"]["name"],
+                    "Category": item.get("Category"),
+                    "Price": item["properties"].get("ExpectedPrice") or item["properties"].get("Price") or "—",
+                }
+                for item in items
+            ]
+
         write_page(
             DOCS / f"{slug}.md",
             title=title,
             description=(
-                f"{len(rows)} matching assets in the {title} category."
+                f"{len(rendered_rows)} matching assets in the {title} category."
             ),
-            headers=headers,
-            rows=rows,
+            headers=schema_fields,
+            rows=rendered_rows,
         )
 
     write_index_page(DOCS / "index.md", category_pages)
 
     icons_found = sum(
-        item["Icon"] != "—"
+        item["context"]["icon"] != "—"
         for item in equipment_items
     )
 

@@ -39,7 +39,7 @@ def render_page(
     description: str,
     rows: list[dict] | None = None,
     headers: list[str] | None = None,
-    sections: dict[str, list[dict]] | None = None,
+    sections: dict[str, tuple[list[str], list[dict]]] | None = None,
 ) -> str:
     if headers is None:
         headers = []
@@ -57,10 +57,18 @@ def render_page(
     ]
 
     if sections:
-        for section_name, section_rows in sections.items():
+        for section_name, section_content in sections.items():
+            # section_content may be a (headers, rows) tuple
+            if isinstance(section_content, (list, tuple)) and len(section_content) == 2:
+                sec_headers, sec_rows = section_content
+            else:
+                # fallback to old format: rows only
+                sec_headers = headers
+                sec_rows = section_content
+
             lines.append(f"## {section_name}")
             lines.append("")
-            lines.extend(render_table(section_rows, headers))
+            lines.extend(render_table(sec_rows, sec_headers))
             lines.append("")
     else:
         lines.extend(render_table(rows or [], headers))
