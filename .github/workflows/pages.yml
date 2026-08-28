@@ -32,14 +32,6 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Set dynamic Jekyll baseurl
-        run: |
-          if grep -q '^baseurl:' docs/_config.yml; then
-            sed -i 's|^baseurl:.*|baseurl: "/${{ github.event.repository.name }}"|' docs/_config.yml
-          else
-            printf '\nbaseurl: "/%s"\n' "${{ github.event.repository.name }}" >> docs/_config.yml
-          fi
-
       - name: Build Jekyll with Pages action
         uses: actions/jekyll-build-pages@v1
         with:
