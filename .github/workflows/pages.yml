@@ -34,12 +34,12 @@ jobs:
 
       - name: Set dynamic Jekyll baseurl
         run: |
-          cat > docs/_config.yml <<EOF
-          title: Bellwright Data
-          url: "https://${{ github.repository_owner }}.github.io"
-          baseurl: "/${{ github.event.repository.name }}"
-          markdown: kramdown
-          EOF
+          printf '%s\n' \
+            'title: Bellwright Data' \
+            'url: "https://${{ github.repository_owner }}.github.io"' \
+            'baseurl: "/${{ github.event.repository.name }}"' \
+            'markdown: kramdown' \
+            > docs/_config.yml
 
       - name: Build Jekyll with Pages action
         uses: actions/jekyll-build-pages@v1
