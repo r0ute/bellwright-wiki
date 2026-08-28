@@ -3,6 +3,8 @@ import json
 import re
 
 from categories import (
+    category_name_for_path,
+    is_equipment_category_group,
     is_equipment_category_path,
     is_equipment_item_path,
 )
@@ -85,7 +87,7 @@ def build_category_index(assets_root: Path) -> dict[str, str]:
     category_index: dict[str, str] = {}
 
     for path in discover_json(assets_root):
-        if not is_equipment_category_path(path):
+        if not is_equipment_category_path(path) or is_equipment_category_group(path):
             continue
 
         try:
@@ -100,6 +102,7 @@ def build_category_index(assets_root: Path) -> dict[str, str]:
             continue
 
         name = asset_name(path, objects)
+        category_index[normalize_category_key(name)] = name
         category_index[normalize_category_key(path.stem)] = name
         category_index[normalize_category_key(f"{path.stem}_C")] = name
 
@@ -169,11 +172,27 @@ def equipment_category_paths(assets_root: Path) -> list[Path]:
     if not category_root.exists():
         return []
 
-    return [
-        path
-        for path in discover_json(assets_root)
-        if path.is_relative_to(category_root)
-    ]
+    seen: set[str] = set()
+    paths: list[Path] = []
+
+    for path in sorted(discover_json(assets_root), key=lambda item: str(item).lower()):
+        if not path.is_relative_to(category_root):
+            continue
+        if is_equipment_category_group(path):
+            continue
+
+        title = category_name_for_path(path)
+        if not title:
+            continue
+
+        key = normalize_category_key(title)
+        if key in seen:
+            continue
+
+        seen.add(key)
+        paths.append(path)
+
+    return paths
 
 
 def write_index_page(output: Path, categories: list[dict]) -> None:
@@ -210,6 +229,10 @@ def write_index_page(output: Path, categories: list[dict]) -> None:
 
 
 def main() -> None:
+    DOCS.mkdir(parents=True, exist_ok=True)
+    for stale in DOCS.glob("*.md"):
+        stale.unlink()
+
     print(f"Assets: {ASSETS}")
     print(f"Docs:   {DOCS}")
 

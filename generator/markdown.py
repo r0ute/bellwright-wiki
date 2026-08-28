@@ -102,7 +102,7 @@ def write_generation_report(
     output.write_text(
         "# Generation Report\n\n"
         f"- JSON files scanned: {scanned}\n"
-        f"- Weapon CDOs generated: {generated}\n"
+        f"- Equipment CDOs generated: {generated}\n"
         f"- Icons found: {icons_found}\n\n"
         "The generator processes equipment items under the main "
         "`Items/Equipment` tree and groups them by the "
