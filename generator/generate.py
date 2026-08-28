@@ -4,43 +4,36 @@ import json
 from categories import category_from_path
 from discover import discover_json
 from icons import build_icon_index, copy_icon, find_icon
-from markdown import write_generation_report, write_weapons
+from markdown import write_generation_report, write_page
+from schemas.weapons import WEAPON_FIELDS
 
 
 ROOT = Path(__file__).resolve().parent.parent
 
 ASSETS = ROOT / "assets"
 DOCS = ROOT / "docs"
-
 ICON_OUT = DOCS / "assets" / "icons"
 
 
-def value(properties: dict, key: str):
-    value = properties.get(key)
-
-    if isinstance(value, dict):
-        return (
-            value.get("LocalizedString")
-            or value.get("SourceString")
-            or value.get("AssetPathName")
-            or value.get("ObjectName")
-        )
-
-    return value
-
-
-def asset_name(path: Path, objects: list) -> str:
-    properties = next(
+def find_cdo(objects: list) -> dict | None:
+    return next(
         (
-            obj.get("Properties")
+            obj
             for obj in objects
             if isinstance(obj, dict)
             and isinstance(obj.get("Properties"), dict)
         ),
-        {},
+        None,
     )
 
-    name = properties.get("Name")
+
+def asset_name(path: Path, objects: list) -> str:
+    cdo = find_cdo(objects)
+
+    if not cdo:
+        return path.stem
+
+    name = cdo["Properties"].get("Name")
 
     if isinstance(name, dict):
         return (
@@ -55,59 +48,17 @@ def asset_name(path: Path, objects: list) -> str:
     return path.stem
 
 
-def find_cdo(objects: list) -> dict | None:
-    """
-    FModel exports commonly contain BlueprintGeneratedClass + CDO.
-
-    Select the object containing Properties.
-    """
-    return next(
-        (
-            obj
-            for obj in objects
-            if isinstance(obj, dict)
-            and isinstance(obj.get("Properties"), dict)
-        ),
-        None,
-    )
-
-
-def weapon_strength(properties: dict):
-    requirements = properties.get("SkillRequirements", [])
-
-    if not isinstance(requirements, list):
-        return "—"
-
-    for requirement in requirements:
-        if not isinstance(requirement, dict):
-            continue
-
-        if "Strength" in str(requirement.get("Key", "")):
-            return requirement.get("Value", "—")
-
-    return "—"
-
-
-def weapon_type(properties: dict):
-    weapon_type = properties.get("WeaponType")
-
-    if isinstance(weapon_type, dict):
-        asset_path = weapon_type.get("AssetPathName", "")
-
-        if asset_path:
-            return Path(asset_path.split(".")[0]).name
-
-        return weapon_type.get("ObjectName", "—")
-
-    return weapon_type or "—"
-
-
 def generate_weapon(
     path: Path,
     objects: list,
     icon_index: dict[str, Path],
 ) -> dict:
-    properties = find_cdo(objects)["Properties"]
+    cdo = find_cdo(objects)
+
+    if not cdo:
+        raise ValueError(f"No CDO found: {path}")
+
+    properties = cdo["Properties"]
 
     name = asset_name(path, objects)
 
@@ -117,34 +68,21 @@ def generate_weapon(
 
     if icon:
         destination = copy_icon(icon, ICON_OUT)
+
         icon_md = (
             f'<img src="assets/icons/{destination.name}" '
             f'alt="{name}" width="48">'
         )
 
+    context = {
+        "name": name,
+        "icon": icon_md,
+        "path": path,
+    }
+
     return {
-        "Icon": icon_md,
-        "Name": name,
-        "Type": weapon_type(properties),
-        "Tier": value(properties, "Tier") or "—",
-        "Damage": value(properties, "Damage") or "—",
-        "Thrust": value(properties, "ThrustDamage") or "—",
-        "Speed": value(properties, "WeaponSpeed") or "—",
-        "Impact": value(properties, "Impact") or "—",
-        "Stability": value(properties, "Stability") or "—",
-        "Length": value(properties, "WeaponLength") or "—",
-        "Max Durability": (
-            value(properties, "MaxDurability")
-            or value(properties, "Durability")
-            or "—"
-        ),
-        "Price": (
-            value(properties, "ExpectedPrice")
-            or value(properties, "Price")
-            or "—"
-        ),
-        "Strength": weapon_strength(properties),
-        "Source": str(path.relative_to(ASSETS)).replace("\\", "/"),
+        field: extractor(properties, context)
+        for field, extractor in WEAPON_FIELDS.items()
     }
 
 
@@ -157,19 +95,18 @@ def main():
     print(f"Icons indexed: {len(icon_index)}")
 
     weapons = []
-
     scanned = 0
 
     for path in discover_json(ASSETS):
         scanned += 1
 
-        category = category_from_path(path)
-
-        if category != "weapons":
+        if category_from_path(path) != "weapons":
             continue
 
         try:
-            raw = json.loads(path.read_text(encoding="utf-8"))
+            raw = json.loads(
+                path.read_text(encoding="utf-8")
+            )
         except Exception as exc:
             print(f"SKIP {path}: {exc}")
             continue
@@ -177,9 +114,7 @@ def main():
         if not isinstance(raw, list):
             raw = [raw]
 
-        cdo = find_cdo(raw)
-
-        if not cdo:
+        if not find_cdo(raw):
             continue
 
         weapons.append(
@@ -190,15 +125,25 @@ def main():
             )
         )
 
-    write_weapons(
-        weapons,
+    headers = list(WEAPON_FIELDS)
+
+    write_page(
         DOCS / "weapons.md",
+        title="All Weapons",
+        description=(
+            f"{len(weapons)} weapon assets "
+            "from the raw FModel export."
+        ),
+        rows=sorted(
+            weapons,
+            key=lambda row: str(row["Name"]).lower(),
+        ),
+        headers=headers,
     )
 
     icons_found = sum(
-        1
+        weapon["Icon"] != "—"
         for weapon in weapons
-        if weapon["Icon"] != "—"
     )
 
     write_generation_report(

@@ -1,38 +1,24 @@
 from pathlib import Path
 
 
-HEADERS = [
-    "Icon",
-    "Name",
-    "Type",
-    "Tier",
-    "Damage",
-    "Thrust",
-    "Speed",
-    "Impact",
-    "Stability",
-    "Length",
-    "Max Durability",
-    "Price",
-    "Strength",
-]
-
-
 def markdown_value(value) -> str:
     if value is None:
         return "—"
 
-    value = str(value)
-
-    return value.replace("|", r"\|").replace("\n", " ")
+    return str(value).replace("|", r"\|").replace("\n", " ")
 
 
-def render_table(rows: list[dict]) -> list[str]:
+def render_table(
+    rows: list[dict],
+    headers: list[str],
+) -> list[str]:
     lines = [
-        "| " + " | ".join(HEADERS) + " |",
-        "| " + " | ".join(
-            ["---"] * 3 + ["---:"] * (len(HEADERS) - 3)
-        ) + " |",
+        "| " + " | ".join(headers) + " |",
+        "| "
+        + " | ".join(
+            ["---"] * 3 + ["---:"] * (len(headers) - 3)
+        )
+        + " |",
     ]
 
     for row in rows:
@@ -40,7 +26,7 @@ def render_table(rows: list[dict]) -> list[str]:
             "| "
             + " | ".join(
                 markdown_value(row.get(header, "—"))
-                for header in HEADERS
+                for header in headers
             )
             + " |"
         )
@@ -48,34 +34,50 @@ def render_table(rows: list[dict]) -> list[str]:
     return lines
 
 
-def render_weapons(rows: list[dict]) -> str:
-    rows = sorted(
-        rows,
-        key=lambda row: str(row.get("Name", "")).lower(),
-    )
-
+def render_page(
+    title: str,
+    description: str,
+    rows: list[dict],
+    headers: list[str],
+) -> str:
     lines = [
         "---",
         "layout: default",
-        "title: All Weapons",
+        f"title: {title}",
         "---",
         "",
-        "# All Weapons",
+        f"# {title}",
         "",
-        f"*{len(rows)} weapon assets from the raw FModel export.*",
+        f"*{description}*",
         "",
-        '<input class="table-search" type="search" placeholder="Search weapons...">',
+        '<input class="table-search" type="search" '
+        f'placeholder="Search {title.lower()}...">',
         "",
-        *render_table(rows),
+        *render_table(rows, headers),
         "",
     ]
 
     return "\n".join(lines)
 
 
-def write_weapons(rows: list[dict], output: Path) -> None:
+def write_page(
+    output: Path,
+    title: str,
+    description: str,
+    rows: list[dict],
+    headers: list[str],
+) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(render_weapons(rows), encoding="utf-8")
+
+    output.write_text(
+        render_page(
+            title,
+            description,
+            rows,
+            headers,
+        ),
+        encoding="utf-8",
+    )
 
 
 def write_generation_report(
@@ -86,14 +88,13 @@ def write_generation_report(
 ) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    text = (
+    output.write_text(
         "# Generation Report\n\n"
         f"- JSON files scanned: {scanned}\n"
         f"- Weapon CDOs generated: {generated}\n"
         f"- Icons found: {icons_found}\n\n"
         "The generator processes every JSON whose path contains "
         "an exact `Weapons` directory. "
-        "It does not filter by tier, rarity, or weapon type.\n"
+        "It does not filter by tier, rarity, or weapon type.\n",
+        encoding="utf-8",
     )
-
-    output.write_text(text, encoding="utf-8")
