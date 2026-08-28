@@ -2,14 +2,50 @@ import json
 from pathlib import Path
 
 
+def _load_json_objects(path: Path) -> list[dict]:
+    """Load a JSON file to a list of objects, handling single-object payloads."""
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+    return raw if isinstance(raw, list) else ([raw] if isinstance(raw, dict) else [])
+
+
+def _superstruct_object_name(obj: dict) -> str | None:
+    """Read the Unreal class name behind a category metadata object."""
+    if not isinstance(obj, dict):
+        return None
+
+    super_struct = obj.get("SuperStruct")
+    if not isinstance(super_struct, dict):
+        return None
+
+    value = super_struct.get("ObjectName")
+    if isinstance(value, str):
+        return value
+
+    return None
+
+
 def is_equipment_category_path(path: Path) -> bool:
     """Return True for category metadata files anywhere under Equipment."""
     lower_parts = [part.lower() for part in path.parts]
-    return (
+    if not (
         "items" in lower_parts
         and "categories" in lower_parts
         and "equipment" in lower_parts
-    )
+    ):
+        return False
+
+    for obj in _load_json_objects(path):
+        object_name = _superstruct_object_name(obj)
+        if object_name and (
+            "MistItemCategory" in object_name or "MistItemCategoryGroup" in object_name
+        ):
+            return True
+
+    return False
 
 
 def is_equipment_item_path(path: Path) -> bool:
@@ -23,7 +59,7 @@ def is_equipment_item_path(path: Path) -> bool:
 
 
 def is_equipment_category_group(path: Path) -> bool:
-    """Return True for wrapper category-group files that should not be page roots."""
+    """Return True for category-group wrapper files that should not be page roots."""
     if not is_equipment_category_path(path):
         return False
 
@@ -35,13 +71,7 @@ def category_name_for_path(path: Path) -> str | None:
     if not is_equipment_category_path(path):
         return None
 
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-    objects = raw if isinstance(raw, list) else [raw]
-    for obj in objects:
+    for obj in _load_json_objects(path):
         if not isinstance(obj, dict):
             continue
         props = obj.get("Properties")

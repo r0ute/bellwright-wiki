@@ -195,6 +195,81 @@ def equipment_category_paths(assets_root: Path) -> list[Path]:
     return paths
 
 
+def build_category_hierarchy(assets_root: Path) -> tuple[dict[str, set[str]], dict[str, str]]:
+    titles: dict[str, str] = {}
+    paths: list[Path] = []
+
+    for path in discover_json(assets_root):
+        if not is_equipment_category_path(path) or is_equipment_category_group(path):
+            continue
+
+        title = category_name_for_path(path)
+        if not title:
+            continue
+
+        key = normalize_category_key(title)
+        titles[key] = title
+        paths.append(path)
+
+    children: dict[str, set[str]] = {key: set() for key in titles}
+
+    for path in paths:
+        title = category_name_for_path(path)
+        if not title:
+            continue
+
+        key = normalize_category_key(title)
+
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        objects = raw if isinstance(raw, list) else [raw]
+        for obj in objects:
+            if not isinstance(obj, dict):
+                continue
+            props = obj.get("Properties")
+            if not isinstance(props, dict):
+                continue
+            parent = props.get("Parent")
+            if not isinstance(parent, dict):
+                continue
+
+            parent_key = category_key_from_ref(parent)
+            if not parent_key:
+                continue
+
+            parent_key = normalize_category_key(parent_key)
+            if not parent_key:
+                continue
+
+            if parent_key not in titles:
+                parent_key = "equipment"
+
+            children.setdefault(parent_key, set()).add(key)
+
+    if "equipment" not in children:
+        children["equipment"] = set(titles)
+
+    return children, titles
+
+
+def category_row_scope(title: str, descendants: dict[str, set[str]], titles: dict[str, str]) -> set[str]:
+    start = normalize_category_key(title)
+    scope: set[str] = set()
+    stack = [start]
+
+    while stack:
+        current = stack.pop()
+        if current in scope:
+            continue
+        scope.add(current)
+        stack.extend(sorted(descendants.get(current, set()), key=str.lower, reverse=True))
+
+    return scope
+
+
 def write_index_page(output: Path, categories: list[dict]) -> None:
     lines = [
         "---",
@@ -277,6 +352,7 @@ def main() -> None:
         )
 
     headers = list(EQUIPMENT_FIELDS)
+    category_children, category_titles = build_category_hierarchy(ASSETS)
 
     for path in equipment_category_paths(ASSETS):
         try:
@@ -291,9 +367,10 @@ def main() -> None:
 
         title = asset_name(path, objects)
         slug = category_slug(path.stem)
+        scope = category_row_scope(title, category_children, category_titles)
         rows = [
             row for row in equipment_items
-            if normalize_category_key(row["Category"]) == normalize_category_key(title)
+            if normalize_category_key(row["Category"]) in scope
         ]
         rows = sorted(rows, key=lambda row: str(row["Name"]).lower())
 
