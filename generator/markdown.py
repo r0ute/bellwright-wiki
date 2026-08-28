@@ -54,9 +54,6 @@ def render_page(
         "",
         f"*{description}*",
         "",
-        '<input class="table-search" type="search" '
-        f'placeholder="Search {title.lower()}...">',
-        "",
     ]
 
     if sections:
@@ -107,9 +104,9 @@ def write_generation_report(
         f"- JSON files scanned: {scanned}\n"
         f"- Weapon CDOs generated: {generated}\n"
         f"- Icons found: {icons_found}\n\n"
-        "The generator processes weapon items under the main "
-        "`Items/Equipment/Weapons` tree and groups them by the "
-        "category metadata in `Items/Categories/Equipment/Weapons`. "
+        "The generator processes equipment items under the main "
+        "`Items/Equipment` tree and groups them by the "
+        "category metadata in `Items/Categories/Equipment`. "
         "Category definition assets are excluded from the item tables.\n",
         encoding="utf-8",
     )

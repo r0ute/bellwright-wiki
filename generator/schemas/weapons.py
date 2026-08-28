@@ -49,11 +49,11 @@ def price(properties: dict[str, Any], _context: dict[str, Any]) -> Any:
     )
 
 
-def weapon_strength(properties: dict[str, Any], _context: dict[str, Any]) -> Any:
+def strength(properties: dict[str, Any], _context: dict[str, Any]) -> Any:
     return required_skill_value(properties, "Strength")
 
 
-WEAPON_FIELDS: dict[str, FieldExtractor] = {
+EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Icon": lambda _properties, context: context["icon"],
     "Name": lambda _properties, context: context["name"],
     "Type": lambda properties, _context: weapon_type(properties),
@@ -66,5 +66,5 @@ WEAPON_FIELDS: dict[str, FieldExtractor] = {
     "Length": field("WeaponLength"),
     "Max Durability": durability,
     "Price": price,
-    "Strength": weapon_strength,
+    "Strength": strength,
 }
