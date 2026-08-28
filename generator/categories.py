@@ -51,9 +51,10 @@ def is_equipment_category_path(path: Path) -> bool:
         object_name = _superstruct_object_name(obj)
         if not object_name:
             continue
-        # Accept only the exact MistItemCategory type (optionally with _C),
-        # but not MistItemCategoryGroup.
-        if re.match(r"^MistItemCategory(?:_C)?$", object_name):
+        # Accept both category objects and category-group wrapper objects
+        # so group titles can be indexed and used as fallbacks for child
+        # category references that don't have their own files.
+        if re.match(r"^MistItemCategory(?:_C)?$", object_name) or re.match(r"^MistItemCategoryGroup(?:_C)?$", object_name):
             return True
 
     return False
@@ -101,3 +102,16 @@ def category_from_path(path: Path) -> str | None:
         return "equipment-category"
 
     return None
+def is_equipment_category_group(path: Path) -> bool:
+    """Return True for category-group wrapper files (MistItemCategoryGroup)."""
+    if not is_equipment_category_path(path):
+        return False
+
+    for obj in _load_json_objects(path):
+        object_name = _superstruct_object_name(obj)
+        if not object_name:
+            continue
+        if re.match(r"^MistItemCategoryGroup(?:_C)?$", object_name):
+            return True
+
+    return False
