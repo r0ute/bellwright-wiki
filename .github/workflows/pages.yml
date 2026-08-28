@@ -31,9 +31,10 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
+          bundler-cache: false
 
       - name: Install Jekyll
-        run: gem install jekyll
+        run: gem install jekyll --no-document
 
       - name: Build Jekyll
         run: jekyll build --source docs --destination docs/_site --baseurl "/${{ github.event.repository.name }}"
