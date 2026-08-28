@@ -40,8 +40,8 @@ jobs:
 
       - name: Verify generated homepage
         run: |
-          test -f ../_site/index.html
-          ls -la ../_site
+          test -f _site/index.html
+          ls -la _site
 
       - name: Upload build
         uses: actions/upload-artifact@v4
