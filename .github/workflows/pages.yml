@@ -27,7 +27,7 @@ jobs:
           python-version: "3.12"
 
       - name: Generate data
-        run: python generator/generate.py
+        run: python -m generator
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
