@@ -22,7 +22,8 @@
       "type": "shell",
       "command": "python",
       "args": [
-        ".\\generator\\generate.py"
+        "-m",
+        "generator"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
