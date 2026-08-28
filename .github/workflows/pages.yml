@@ -30,20 +30,18 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
-          bundler-cache: true
-          working-directory: docs
 
-      - name: Install Jekyll dependencies
-        run: bundle install
-        working-directory: docs
+      - name: Install Jekyll
+        run: gem install jekyll
 
       - name: Build Jekyll
-        run: bundle exec jekyll build --source docs --destination _site
+        run: jekyll build --source . --destination ../_site
+        working-directory: docs
 
       - name: Verify generated homepage
         run: |
-          test -f _site/index.html
-          ls -la _site
+          test -f ../_site/index.html
+          ls -la ../_site
 
       - name: Upload build
         uses: actions/upload-artifact@v4
