@@ -33,9 +33,11 @@ jobs:
           bundler-cache: true
           working-directory: docs
 
+      - name: Install Jekyll
+        run: gem install jekyll
+
       - name: Build Jekyll
-        working-directory: docs
-        run: bundle exec jekyll build
+        run: jekyll build --source docs --destination docs/_site
 
       - name: Upload build
         uses: actions/upload-artifact@v4
