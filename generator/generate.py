@@ -86,7 +86,7 @@ def generate_weapon(
     }
 
 
-def main():
+def main() -> None:
     print(f"Assets: {ASSETS}")
     print(f"Docs:   {DOCS}")
 
