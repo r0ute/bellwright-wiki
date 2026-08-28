@@ -285,17 +285,16 @@ def write_index_page(output: Path, categories: list[dict]) -> None:
 
     for category in sorted(categories, key=lambda item: item["title"].lower()):
         lines.append(
-            f'- [{category["title"]}]'
-            f'({{{{ "/{category["slug"]}" | relative_url }}}})'
+            f'- [{category["title"]}]({category["slug"]})'
         )
 
     lines.extend([
         "",
         "## Reports",
         "",
-        '- [Generation report]({{ "/generation-report" | relative_url }})',
+        "- [Generation report](generation-report)",
         "",
-    ])
+])
 
     output.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
