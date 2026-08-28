@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 
@@ -13,7 +14,10 @@ def _load_json_objects(path: Path) -> list[dict]:
 
 
 def _superstruct_object_name(obj: dict) -> str | None:
-    """Read the Unreal class name behind a category metadata object."""
+    """Read the Unreal class name behind a category metadata object.
+
+    If the name is wrapped like "Class'Foo'" return the inner token (Foo).
+    """
     if not isinstance(obj, dict):
         return None
 
@@ -22,10 +26,15 @@ def _superstruct_object_name(obj: dict) -> str | None:
         return None
 
     value = super_struct.get("ObjectName")
-    if isinstance(value, str):
-        return value
+    if not isinstance(value, str):
+        return None
 
-    return None
+    # Extract inner name from quotes if present: Class'Name' -> Name
+    match = re.search(r"'([^']+)'", value)
+    if match:
+        return match.group(1)
+
+    return value
 
 
 def is_equipment_category_path(path: Path) -> bool:
@@ -40,9 +49,11 @@ def is_equipment_category_path(path: Path) -> bool:
 
     for obj in _load_json_objects(path):
         object_name = _superstruct_object_name(obj)
-        if object_name and (
-            "MistItemCategory" in object_name or "MistItemCategoryGroup" in object_name
-        ):
+        if not object_name:
+            continue
+        # Accept only the exact MistItemCategory type (optionally with _C),
+        # but not MistItemCategoryGroup.
+        if re.match(r"^MistItemCategory(?:_C)?$", object_name):
             return True
 
     return False
@@ -56,14 +67,6 @@ def is_equipment_item_path(path: Path) -> bool:
         and "equipment" in lower_parts
         and "categories" not in lower_parts
     )
-
-
-def is_equipment_category_group(path: Path) -> bool:
-    """Return True for category-group wrapper files that should not be page roots."""
-    if not is_equipment_category_path(path):
-        return False
-
-    return path.stem.endswith("CategoryGroup")
 
 
 def category_name_for_path(path: Path) -> str | None:

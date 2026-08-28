@@ -4,7 +4,6 @@ import re
 
 from categories import (
     category_name_for_path,
-    is_equipment_category_group,
     is_equipment_category_path,
     is_equipment_item_path,
 )
@@ -87,7 +86,7 @@ def build_category_index(assets_root: Path) -> dict[str, str]:
     category_index: dict[str, str] = {}
 
     for path in discover_json(assets_root):
-        if not is_equipment_category_path(path) or is_equipment_category_group(path):
+        if not is_equipment_category_path(path):
             continue
 
         try:
@@ -178,8 +177,6 @@ def equipment_category_paths(assets_root: Path) -> list[Path]:
     for path in sorted(discover_json(assets_root), key=lambda item: str(item).lower()):
         if not path.is_relative_to(category_root):
             continue
-        if is_equipment_category_group(path):
-            continue
 
         title = category_name_for_path(path)
         if not title:
@@ -200,7 +197,7 @@ def build_category_hierarchy(assets_root: Path) -> tuple[dict[str, set[str]], di
     paths: list[Path] = []
 
     for path in discover_json(assets_root):
-        if not is_equipment_category_path(path) or is_equipment_category_group(path):
+        if not is_equipment_category_path(path):
             continue
 
         title = category_name_for_path(path)
