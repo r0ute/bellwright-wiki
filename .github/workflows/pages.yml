@@ -1,0 +1,64 @@
+name: Build and Deploy Pages
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.BW_ASSETS_ACCESS }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate data
+        run: python generator/generate.py
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: docs
+
+      - name: Build Jekyll
+        working-directory: docs
+        run: bundle exec jekyll build
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: docs/_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: _site
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./_site
+          force_orphan: true
