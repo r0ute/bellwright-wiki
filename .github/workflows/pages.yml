@@ -33,13 +33,14 @@ jobs:
           bundler-cache: true
           working-directory: docs
 
-      - name: Install Jekyll
-        run: gem install jekyll
+      - name: Install Jekyll dependencies
+        run: bundle install
+        working-directory: docs
 
       - name: Build Jekyll
-        run: jekyll build --source docs --destination _site
+        run: bundle exec jekyll build --source docs --destination _site
 
-      - name: Verify generated site
+      - name: Verify generated homepage
         run: |
           test -f _site/index.html
           ls -la _site
