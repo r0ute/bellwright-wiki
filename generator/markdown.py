@@ -37,9 +37,13 @@ def render_table(
 def render_page(
     title: str,
     description: str,
-    rows: list[dict],
-    headers: list[str],
+    rows: list[dict] | None = None,
+    headers: list[str] | None = None,
+    sections: dict[str, list[dict]] | None = None,
 ) -> str:
+    if headers is None:
+        headers = []
+
     lines = [
         "---",
         "layout: default",
@@ -53,9 +57,17 @@ def render_page(
         '<input class="table-search" type="search" '
         f'placeholder="Search {title.lower()}...">',
         "",
-        *render_table(rows, headers),
-        "",
     ]
+
+    if sections:
+        for section_name, section_rows in sections.items():
+            lines.append(f"## {section_name}")
+            lines.append("")
+            lines.extend(render_table(section_rows, headers))
+            lines.append("")
+    else:
+        lines.extend(render_table(rows or [], headers))
+        lines.append("")
 
     return "\n".join(lines)
 
@@ -64,8 +76,9 @@ def write_page(
     output: Path,
     title: str,
     description: str,
-    rows: list[dict],
-    headers: list[str],
+    rows: list[dict] | None = None,
+    headers: list[str] | None = None,
+    sections: dict[str, list[dict]] | None = None,
 ) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -73,8 +86,9 @@ def write_page(
         render_page(
             title,
             description,
-            rows,
-            headers,
+            rows=rows,
+            headers=headers,
+            sections=sections,
         ),
         encoding="utf-8",
     )
@@ -93,8 +107,9 @@ def write_generation_report(
         f"- JSON files scanned: {scanned}\n"
         f"- Weapon CDOs generated: {generated}\n"
         f"- Icons found: {icons_found}\n\n"
-        "The generator processes every JSON whose path contains "
-        "an exact `Weapons` directory. "
-        "It does not filter by tier, rarity, or weapon type.\n",
+        "The generator processes weapon items under the main "
+        "`Items/Equipment/Weapons` tree and groups them by the "
+        "category metadata in `Items/Categories/Equipment/Weapons`. "
+        "Category definition assets are excluded from the item tables.\n",
         encoding="utf-8",
     )
