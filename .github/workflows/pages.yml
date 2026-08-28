@@ -5,18 +5,20 @@ on:
     branches: [master]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: false
           token: ${{ secrets.BW_ASSETS_ACCESS }}
 
       - name: Setup Python
@@ -27,42 +29,38 @@ jobs:
       - name: Generate data
         run: python generator/generate.py
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Set dynamic Jekyll baseurl
+        run: |
+          cat > docs/_config.yml <<EOF
+          title: Bellwright Data
+          url: "https://${{ github.repository_owner }}.github.io"
+          baseurl: "/${{ github.event.repository.name }}"
+          markdown: kramdown
+          EOF
+
+      - name: Build Jekyll with Pages action
+        uses: actions/jekyll-build-pages@v1
         with:
-          ruby-version: "3.3"
-          bundler-cache: false
+          source: ./docs
+          destination: ./_site
 
-      - name: Install Jekyll
-        run: gem install jekyll --no-document
-
-      - name: Build Jekyll
-        run: jekyll build --source docs --destination docs/_site --baseurl "/${{ github.event.repository.name }}"
-
-      - name: Upload build
-        uses: actions/upload-artifact@v4
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: site
-          path: docs/_site
+          path: ./_site
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Download build
-        uses: actions/download-artifact@v4
-        with:
-          name: site
-          path: _site
-
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: ./_site
-          force_orphan: true
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
