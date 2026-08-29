@@ -6,7 +6,7 @@ from typing import Any
 
 FieldExtractor = Callable[[dict[str, Any], dict[str, Any]], Any]
 
-DAMAGE_TYPES = ("Piercing",)
+DAMAGE_TYPES = ("Piercing", "Blunt", "Cutting", "Pickaxe", "Axe")
 
 
 def get_value(properties: dict[str, Any], key: str) -> Any:

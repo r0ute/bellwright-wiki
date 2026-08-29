@@ -1,19 +1,11 @@
 from __future__ import annotations
 
-from generator.schemas.common import (
-    FieldExtractor,
-    field,
-)
+from generator.schemas.common import FieldExtractor, damage_type, field, tier
 
 EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Icon": lambda _p, ctx: ctx["icon"],
     "Name": lambda _p, ctx: ctx["name"],
-    "Repair Value": field("RepairValue"),
-    "Activated Mesh": field("ActivatedMesh"),
-    "Sheath Mesh": field("SheathMesh"),
-    "Carry Type": field("CarryType"),
+    "Tier": tier,
     "Damage": field("Damage"),
-    "Damage Type": field("DamageType"),
-    "Thrust Damage": field("ThrustDamage"),
-    "Weapon Type": field("WeaponType"),
+    "Damage Type": damage_type,
 }
