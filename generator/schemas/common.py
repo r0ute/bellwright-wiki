@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 FieldExtractor = Callable[[dict[str, Any], dict[str, Any]], Any]
@@ -9,12 +8,8 @@ FieldExtractor = Callable[[dict[str, Any], dict[str, Any]], Any]
 DAMAGE_TYPES = ("Piercing", "Blunt", "Cutting", "Pickaxe", "Axe")
 
 
-def get_value(properties: dict[str, Any], key: str) -> Any:
-    return properties.get(key)
-
-
 def extract_value(properties: dict[str, Any], key: str) -> Any:
-    value = get_value(properties, key)
+    value = properties.get(key)
 
     if not isinstance(value, dict):
         return value
@@ -90,20 +85,6 @@ def damage_type(
             return damage
 
     return ""
-
-
-def resolve_path_name(value: Any) -> str:
-    if isinstance(value, dict):
-        value = (
-            value.get("AssetPathName")
-            or value.get("ObjectPath")
-            or value.get("ObjectName")
-        )
-
-    if not isinstance(value, str) or not value:
-        return ""
-
-    return Path(value.split(".", 1)[0]).name
 
 
 def nested_field(

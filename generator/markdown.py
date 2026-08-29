@@ -116,21 +116,3 @@ def write_page(
         ),
         encoding="utf-8",
     )
-
-
-def write_generation_report(
-    output: Path,
-    scanned: int,
-    generated: int,
-    icons_found: int,
-) -> None:
-    """Write the generation summary."""
-    output.parent.mkdir(parents=True, exist_ok=True)
-
-    output.write_text(
-        "# Generation Report\n\n"
-        f"- JSON files scanned: {scanned}\n"
-        f"- Equipment CDOs generated: {generated}\n"
-        f"- Icons found: {icons_found}\n",
-        encoding="utf-8",
-    )

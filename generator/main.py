@@ -35,23 +35,7 @@ def render_items(
     items: list[dict],
     schema,
 ) -> tuple[list[str], list[dict]]:
-    if schema is None:
-        headers = ["Icon", "Name", "Category", "Price"]
-
-        rows = [
-            {
-                "Icon": item["context"]["icon"],
-                "Name": item["context"]["name"],
-                "Category": item["Category"],
-                "Price": (
-                    item["properties"].get("ExpectedPrice")
-                    or item["properties"].get("Price")
-                    or ""
-                ),
-            }
-            for item in items
-        ]
-    else:
+    if schema:
         headers = list(schema.EQUIPMENT_FIELDS.keys())
         rows = []
 
@@ -102,8 +86,6 @@ def main() -> None:
     category_index = scanner.build_category_index(assets)
 
     category_children, category_titles = scanner.build_category_hierarchy(assets)
-
-    category_paths = scanner.equipment_category_paths(assets)
 
     print(f"Icons indexed: {len(icon_index)}")
     print(f"Categories indexed: {len(category_titles)}")
@@ -233,7 +215,7 @@ def main() -> None:
         md.write_page(
             docs / f"{slug}.md",
             title=title,
-            description=f"{total} matching assets.",
+            description=f"{total} matching assets",
             sections=sections,
         )
 
