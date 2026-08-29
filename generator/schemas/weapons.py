@@ -1,23 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
-
-try:
-    from generator.schemas.common import (
-        FieldExtractor,
-        extract_value,
-        field,
-        required_skill_value,
-        resolve_path_name,
-    )
-except ModuleNotFoundError:  # direct script execution
-    from schemas.common import (
-        FieldExtractor,
-        extract_value,
-        field,
-        required_skill_value,
-        resolve_path_name,
-    )
+from generator.schemas.common import (
+    FieldExtractor,
+    extract_value,
+    field,
+    required_skill_value,
+    resolve_path_name,
+)
 
 
 def weapon_type(properties: dict[str, Any]) -> str:

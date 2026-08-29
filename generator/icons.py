@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-ICON_EXTENSIONS = (".webp")
+ICON_EXTENSIONS = ".webp"
 
 
 def build_icon_index(assets_root: Path) -> dict[str, Path]:

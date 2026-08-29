@@ -23,8 +23,7 @@ def find_cdo(objects: list) -> dict | None:
         (
             obj
             for obj in objects
-            if isinstance(obj, dict)
-            and isinstance(obj.get("Properties"), dict)
+            if isinstance(obj, dict) and isinstance(obj.get("Properties"), dict)
         ),
         None,
     )
@@ -39,11 +38,7 @@ def asset_name(path: Path, objects: list) -> str:
     name = cdo["Properties"].get("Name")
 
     if isinstance(name, dict):
-        return (
-            name.get("LocalizedString")
-            or name.get("SourceString")
-            or path.stem
-        )
+        return name.get("LocalizedString") or name.get("SourceString") or path.stem
 
     if isinstance(name, str) and name:
         return name
@@ -120,7 +115,9 @@ def category_name_for(properties: dict, category_index: dict[str, str]) -> str |
         return title
 
     # Fallback: prefix match to a parent/group category
-    for candidate_key, candidate_title in sorted(category_index.items(), key=lambda it: -len(it[0])):
+    for candidate_key, candidate_title in sorted(
+        category_index.items(), key=lambda it: -len(it[0])
+    ):
         if normalized.startswith(candidate_key):
             return candidate_title
 
@@ -150,10 +147,7 @@ def generate_equipment_item(
     if icon:
         destination = copy_icon(icon, ICON_OUT)
 
-        icon_md = (
-            f'<img src="assets/icons/{destination.name}" '
-            f'alt="{name}" width="48">'
-        )
+        icon_md = f'<img src="assets/icons/{destination.name}" alt="{name}" width="48">'
 
     context = {
         "name": name,
@@ -174,7 +168,16 @@ def category_slug(value: str) -> str:
 
 
 def equipment_category_paths(assets_root: Path) -> list[Path]:
-    category_root = assets_root / "Bellwright" / "Content" / "Mist" / "Data" / "Items" / "Categories" / "Equipment"
+    category_root = (
+        assets_root
+        / "Bellwright"
+        / "Content"
+        / "Mist"
+        / "Data"
+        / "Items"
+        / "Categories"
+        / "Equipment"
+    )
     if not category_root.exists():
         return []
 
@@ -208,7 +211,9 @@ def equipment_category_paths(assets_root: Path) -> list[Path]:
     return paths
 
 
-def build_category_hierarchy(assets_root: Path) -> tuple[dict[str, set[str]], dict[str, str]]:
+def build_category_hierarchy(
+    assets_root: Path,
+) -> tuple[dict[str, set[str]], dict[str, str]]:
     titles: dict[str, str] = {}
     paths: list[Path] = []
 
@@ -268,7 +273,9 @@ def build_category_hierarchy(assets_root: Path) -> tuple[dict[str, set[str]], di
     return children, titles
 
 
-def category_row_scope(title: str, descendants: dict[str, set[str]], titles: dict[str, str]) -> set[str]:
+def category_row_scope(
+    title: str, descendants: dict[str, set[str]], titles: dict[str, str]
+) -> set[str]:
     start = normalize_category_key(title)
     scope: set[str] = set()
     stack = [start]
@@ -278,6 +285,8 @@ def category_row_scope(title: str, descendants: dict[str, set[str]], titles: dic
         if current in scope:
             continue
         scope.add(current)
-        stack.extend(sorted(descendants.get(current, set()), key=str.lower, reverse=True))
+        stack.extend(
+            sorted(descendants.get(current, set()), key=str.lower, reverse=True)
+        )
 
     return scope

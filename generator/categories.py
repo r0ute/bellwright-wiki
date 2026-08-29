@@ -54,7 +54,9 @@ def is_equipment_category_path(path: Path) -> bool:
         # Accept both category objects and category-group wrapper objects
         # so group titles can be indexed and used as fallbacks for child
         # category references that don't have their own files.
-        if re.match(r"^MistItemCategory(?:_C)?$", object_name) or re.match(r"^MistItemCategoryGroup(?:_C)?$", object_name):
+        if re.match(r"^MistItemCategory(?:_C)?$", object_name) or re.match(
+            r"^MistItemCategoryGroup(?:_C)?$", object_name
+        ):
             return True
 
     return False
@@ -102,6 +104,8 @@ def category_from_path(path: Path) -> str | None:
         return "equipment-category"
 
     return None
+
+
 def is_equipment_category_group(path: Path) -> bool:
     """Return True for category-group wrapper files (MistItemCategoryGroup)."""
     if not is_equipment_category_path(path):

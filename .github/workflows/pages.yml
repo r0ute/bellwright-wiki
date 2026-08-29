@@ -26,6 +26,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Verify Python format
+        run: ruff format --check generator
+
       - name: Generate data
         run: python -m generator
 

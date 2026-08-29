@@ -20,10 +20,7 @@ def render_table(
     for row in rows:
         lines.append(
             "| "
-            + " | ".join(
-                markdown_value(row.get(header, ""))
-                for header in headers
-            )
+            + " | ".join(markdown_value(row.get(header, "")) for header in headers)
             + " |"
         )
 

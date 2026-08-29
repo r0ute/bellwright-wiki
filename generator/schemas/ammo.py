@@ -8,7 +8,6 @@ from generator.schemas.common import (
     nested_field,
 )
 
-
 EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Icon": lambda _p, ctx: ctx["icon"],
     "Name": lambda _p, ctx: ctx["name"],

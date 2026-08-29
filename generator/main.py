@@ -104,7 +104,9 @@ def main() -> None:
 
         sections: dict[str, tuple[list[str], list[dict]]] = {}
 
-        child_keys = sorted(category_children.get(key, set()), key=lambda k: category_titles.get(k, ""))
+        child_keys = sorted(
+            category_children.get(key, set()), key=lambda k: category_titles.get(k, "")
+        )
 
         if child_keys:
             for child_key in child_keys:
@@ -116,9 +118,12 @@ def main() -> None:
                 if child_path and scanner.is_equipment_category_group(child_path):
                     continue
 
-                child_scope = scanner.category_row_scope(child_title, category_children, category_titles)
+                child_scope = scanner.category_row_scope(
+                    child_title, category_children, category_titles
+                )
                 child_items = [
-                    item for item in equipment_items
+                    item
+                    for item in equipment_items
                     if scanner.normalize_category_key(item["Category"]) in child_scope
                 ]
 
@@ -128,7 +133,9 @@ def main() -> None:
                 if child_path:
                     child_slug = scanner.category_slug(child_path.stem)
                     try:
-                        schema = importlib.import_module(f"generator.schemas.{child_slug}")
+                        schema = importlib.import_module(
+                            f"generator.schemas.{child_slug}"
+                        )
                     except Exception:
                         schema = None
 
@@ -155,15 +162,20 @@ def main() -> None:
                             row[field_name] = ""
                     rendered_rows.append(row)
 
-                rendered_rows = sorted(rendered_rows, key=lambda r: str(r.get("Name", "")).lower())
+                rendered_rows = sorted(
+                    rendered_rows, key=lambda r: str(r.get("Name", "")).lower()
+                )
                 sections[child_title] = (schema_fields, rendered_rows)
                 processed_keys.add(child_key)
 
             processed_keys.add(key)
         else:
-            group_scope = scanner.category_row_scope(title, category_children, category_titles)
+            group_scope = scanner.category_row_scope(
+                title, category_children, category_titles
+            )
             group_items = [
-                item for item in equipment_items
+                item
+                for item in equipment_items
                 if scanner.normalize_category_key(item["Category"]) in group_scope
             ]
 
@@ -196,11 +208,15 @@ def main() -> None:
                     row["Icon"] = ctx["icon"]
                     row["Name"] = ctx["name"]
                     row["Category"] = item.get("Category")
-                    row["Price"] = props.get("ExpectedPrice") or props.get("Price") or ""
+                    row["Price"] = (
+                        props.get("ExpectedPrice") or props.get("Price") or ""
+                    )
 
                 rendered_rows.append(row)
 
-            rendered_rows = sorted(rendered_rows, key=lambda r: str(r.get("Name", "")).lower())
+            rendered_rows = sorted(
+                rendered_rows, key=lambda r: str(r.get("Name", "")).lower()
+            )
             sections[title] = (schema_fields, rendered_rows)
             processed_keys.add(key)
 
@@ -212,9 +228,7 @@ def main() -> None:
         md.write_page(
             DOCS / f"{slug}.md",
             title=title,
-            description=(
-                f"{total} matching assets in the {title} category."
-            ),
+            description=(f"{total} matching assets in the {title} category."),
             headers=default_headers,
             sections=sections,
         )
@@ -242,7 +256,8 @@ def main() -> None:
         slug = scanner.category_slug(path.stem)
         scope = scanner.category_row_scope(title, category_children, category_titles)
         items = [
-            item for item in equipment_items
+            item
+            for item in equipment_items
             if scanner.normalize_category_key(item["Category"]) in scope
         ]
         items = sorted(items, key=lambda item: str(item["context"]["name"]).lower())
@@ -282,7 +297,9 @@ def main() -> None:
                     "Icon": item["context"]["icon"],
                     "Name": item["context"]["name"],
                     "Category": item.get("Category"),
-                    "Price": item["properties"].get("ExpectedPrice") or item["properties"].get("Price") or "",
+                    "Price": item["properties"].get("ExpectedPrice")
+                    or item["properties"].get("Price")
+                    or "",
                 }
                 for item in items
             ]
@@ -299,10 +316,7 @@ def main() -> None:
 
     renderer.write_index_page(DOCS / "index.md", category_pages)
 
-    icons_found = sum(
-        item["context"]["icon"] != ""
-        for item in equipment_items
-    )
+    icons_found = sum(item["context"]["icon"] != "" for item in equipment_items)
 
     md.write_generation_report(
         DOCS / "generation-report.md",
