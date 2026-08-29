@@ -253,7 +253,7 @@ def main() -> None:
     renderer.write_index_page(
         docs / "index.md",
         category_pages,
-        assets / "Bellwright/Content/Mist/UI/Elements/MainMenu/T_Logo.webp",
+        assets / "T_Logo.webp",
     )
 
 
