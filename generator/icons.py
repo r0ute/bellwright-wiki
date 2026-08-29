@@ -1,12 +1,17 @@
 from pathlib import Path
 
-ICON_EXTENSIONS = ".webp"
+ICON_EXTENSIONS = {".webp"}
 
 
 def build_icon_index(assets_root: Path) -> dict[str, Path]:
     """
-    Build:
-        filename stem -> actual icon path
+    Build an index:
+
+        icon filename stem -> actual icon path
+
+    Example:
+        T_ItemTypeArrows.webp
+        -> "t_itemtypearrows": Path(...)
     """
     index: dict[str, Path] = {}
 
@@ -24,12 +29,35 @@ def build_icon_index(assets_root: Path) -> dict[str, Path]:
 
 def asset_path_stem(asset_path_name: str) -> str:
     """
-    Convert an Unreal/FModel AssetPathName into a filename stem.
+    Convert an Unreal/FModel AssetPathName/ObjectPath into
+    the extracted filename stem.
+
+    Examples:
+
+        /Game/Mist/UI/Icons_new/ResourcesType/T_ItemTypeArrows.0
+        -> T_ItemTypeArrows
+
+        /Game/Mist/UI/Icons_new/ResourcesType/T_ItemTypeArrows
+        -> T_ItemTypeArrows
+
+        Texture2D'T_ItemTypeArrows'
+        -> T_ItemTypeArrows
     """
-    if not asset_path_name:
+    if not isinstance(asset_path_name, str) or not asset_path_name:
         return ""
 
-    value = asset_path_name.split(".")[0]
+    value = asset_path_name.strip()
+
+    # Remove Unreal object wrapper:
+    # Texture2D'Foo' -> Foo
+    if "'" in value:
+        match = value.rsplit("'", 2)
+        if len(match) == 3 and match[1]:
+            value = match[1]
+
+    # Remove export/object instance suffix:
+    # Foo.0 -> Foo
+    value = value.split(".")[0]
 
     return Path(value).name
 
@@ -38,23 +66,37 @@ def find_icon(
     properties: dict,
     icon_index: dict[str, Path],
 ) -> Path | None:
-    """Resolve Properties.Icon to an actual extracted image."""
+    """
+    Resolve Properties.Icon to an extracted .webp icon.
+
+    FModel may expose the reference using either:
+        ObjectPath
+        AssetPathName
+        ObjectName
+    """
     icon = properties.get("Icon")
 
     if not isinstance(icon, dict):
         return None
 
-    asset_path = icon.get("AssetPathName", "")
+    # Prefer the actual Unreal asset path.
+    for key in ("ObjectPath", "AssetPathName", "ObjectName"):
+        value = icon.get(key)
 
-    if not isinstance(asset_path, str):
-        return None
+        if not isinstance(value, str) or not value:
+            continue
 
-    stem = asset_path_stem(asset_path)
+        stem = asset_path_stem(value)
 
-    if not stem:
-        return None
+        if not stem:
+            continue
 
-    return icon_index.get(stem.lower())
+        result = icon_index.get(stem.lower())
+
+        if result:
+            return result
+
+    return None
 
 
 def copy_icon(

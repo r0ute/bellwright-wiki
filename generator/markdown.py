@@ -2,6 +2,7 @@ from pathlib import Path
 
 
 def markdown_value(value) -> str:
+    """Convert a value to safe Markdown table content."""
     if value is None:
         return ""
 
@@ -12,6 +13,10 @@ def render_table(
     rows: list[dict],
     headers: list[str],
 ) -> list[str]:
+    """Render rows as a Markdown table."""
+    if not headers:
+        return []
+
     lines = [
         "| " + " | ".join(headers) + " |",
         "| " + " | ".join(["---"] * len(headers)) + " |",
@@ -33,9 +38,24 @@ def render_page(
     rows: list[dict] | None = None,
     headers: list[str] | None = None,
     sections: dict[str, tuple[list[str], list[dict]]] | None = None,
+    links: list[tuple[str, str]] | None = None,
 ) -> str:
-    if headers is None:
-        headers = []
+    """
+    Render a complete Markdown page.
+
+    `sections`:
+        {
+            "Weapons": (headers, rows),
+            "Tools": (headers, rows),
+        }
+
+    `links`:
+        [
+            ("Ammo", "ammo.md"),
+            ("Armors", "armors.md"),
+        ]
+    """
+    headers = headers or []
 
     lines = [
         "---",
@@ -49,22 +69,25 @@ def render_page(
         "",
     ]
 
+    # Optional links, primarily used by index.md.
+    if links:
+        for link_title, link_target in links:
+            lines.append(f"- [{link_title}]({link_target})")
+
+        lines.append("")
+
     if sections:
         for section_name, section_content in sections.items():
-            # section_content may be a (headers, rows) tuple
-            if isinstance(section_content, (list, tuple)) and len(section_content) == 2:
-                sec_headers, sec_rows = section_content
-            else:
-                # fallback to old format: rows only
-                sec_headers = headers
-                sec_rows = section_content
+            sec_headers, sec_rows = section_content
 
             lines.append(f"## {section_name}")
             lines.append("")
+
             lines.extend(render_table(sec_rows, sec_headers))
             lines.append("")
-    else:
-        lines.extend(render_table(rows or [], headers))
+
+    elif rows is not None and headers:
+        lines.extend(render_table(rows, headers))
         lines.append("")
 
     return "\n".join(lines)
@@ -76,17 +99,20 @@ def write_page(
     description: str,
     rows: list[dict] | None = None,
     headers: list[str] | None = None,
-    sections: dict[str, list[dict]] | None = None,
+    sections: dict[str, tuple[list[str], list[dict]]] | None = None,
+    links: list[tuple[str, str]] | None = None,
 ) -> None:
+    """Write a rendered Markdown page."""
     output.parent.mkdir(parents=True, exist_ok=True)
 
     output.write_text(
         render_page(
-            title,
-            description,
+            title=title,
+            description=description,
             rows=rows,
             headers=headers,
             sections=sections,
+            links=links,
         ),
         encoding="utf-8",
     )
@@ -98,12 +124,13 @@ def write_generation_report(
     generated: int,
     icons_found: int,
 ) -> None:
+    """Write the generation summary."""
     output.parent.mkdir(parents=True, exist_ok=True)
 
     output.write_text(
         "# Generation Report\n\n"
         f"- JSON files scanned: {scanned}\n"
         f"- Equipment CDOs generated: {generated}\n"
-        f"- Icons found: {icons_found}.\n",
+        f"- Icons found: {icons_found}\n",
         encoding="utf-8",
     )
