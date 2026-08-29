@@ -1,26 +1,21 @@
 from __future__ import annotations
 
-try:
-    from generator.schemas.common import (
-        FieldExtractor,
-        extract_value,
-        field,
-    )
-except ModuleNotFoundError:
-    from schemas.common import (
-        FieldExtractor,
-        field,
-    )
+from generator.schemas.common import (
+    FieldExtractor,
+    asset_reference_name,
+    enum_value,
+    field,
+    required_skill_value,
+)
 
 EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Icon": lambda _p, ctx: ctx["icon"],
     "Name": lambda _p, ctx: ctx["name"],
-    "Armor Slot": field("ArmorSlot"),
-    "B Hide Corresponding Bodypart": field("bHideCorrespondingBodypart"),
-    "B Hide Upper Default Clothing": field("bHideUpperDefaultClothing"),
-    "B Hide Lower Default Clothing": field("bHideLowerDefaultClothing"),
-    "Equipped Mesh": field("EquippedMesh"),
-    "Female Equipped Mesh": field("FemaleEquippedMesh"),
-    "Equipped Mesh Attach Socket": field("EquippedMeshAttachSocket"),
-    "Phys Material": field("PhysMaterial"),
+    "Category": lambda p, _ctx: asset_reference_name(p.get("Category")),
+    "Armor Slot": lambda p, _ctx: enum_value(p.get("ArmorSlot")),
+    "Armor": field("Armor"),
+    "MovementSpeedReduction": field("MovementSpeedReduction"),
+    "SkillRequirements": lambda p, _ctx: required_skill_value(
+        p.get("SkillRequirements")
+    ),
 }

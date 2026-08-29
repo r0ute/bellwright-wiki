@@ -59,26 +59,24 @@ def asset_reference_name(value: Any) -> str:
     return value.removesuffix("_C")
 
 
-def required_skill_value(
-    properties: dict[str, Any],
-    skill_name: str,
-) -> Any:
-    requirements = get_value(properties, "SkillRequirements")
-
+def required_skill_value(requirements: Any) -> Any:
     if not isinstance(requirements, list):
         return ""
+
+    values = []
 
     for requirement in requirements:
         if not isinstance(requirement, dict):
             continue
 
         key = str(requirement.get("Key", ""))
+        skill = key.rsplit("::", 1)[-1]
+        value = requirement.get("Value")
 
-        if skill_name.lower() in key.lower():
-            value = requirement.get("Value")
-            return value if value is not None else ""
+        if skill and value is not None:
+            values.append(f"{skill}: {value}")
 
-    return ""
+    return ", ".join(values)
 
 
 def damage_type(
@@ -140,3 +138,10 @@ def field(
         return extract_value(properties, key) or fallback
 
     return _extract
+
+
+def enum_value(value) -> str:
+    if not isinstance(value, str):
+        return ""
+
+    return value.rsplit("::", 1)[-1]
