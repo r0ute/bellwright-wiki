@@ -1,23 +1,25 @@
 .sortable {
   cursor: pointer;
   position: relative;
-  padding-right: 1.5em;
+  padding-right: 1.5em !important;
 }
 
 .sortable::after {
-  content: "↕";
+  content: "";
   position: absolute;
   right: 0.5em;
   top: 50%;
-  transform: translateY(-50%);
-  white-space: nowrap;
-  line-height: 1;
+  width: 0.45em;
+  height: 0.45em;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  transform: translateY(-65%) rotate(-45deg);
 }
 
 .sortable[data-order="asc"]::after {
-  content: "↑";
+  transform: translateY(15%) rotate(-45deg);
 }
 
 .sortable[data-order="desc"]::after {
-  content: "↓";
+  transform: translateY(-85%) rotate(135deg);
 }
