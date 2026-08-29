@@ -31,8 +31,8 @@ def write_index_page(output: Path, categories: list[dict], logo: Path) -> None:
         "",
         "# Bellwright Data",
         "",
-        "A searchable reference of extracted **Bellwright** game data, "
-        "including equipment, categories, properties, and item icons.",
+        "A searchable reference of **Bellwright** game data, "
+        "organized for easy browsing.",
         "",
         "[![GitHub](https://img.shields.io/badge/Source%20Code-GitHub-181717?logo=github)]"
         "(https://github.com/r0ute/bw-data)",

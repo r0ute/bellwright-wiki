@@ -10,7 +10,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "Get-ChildItem -Path .\\docs -File -Filter *.md | Remove-Item -Force; if (Test-Path .\\docs\\assets) { Remove-Item -Recurse -Force .\\docs\\assets }"
+        "Get-ChildItem -Path .\\docs -File -Filter *.md | Remove-Item -Force; if (Test-Path .\\docs\\assets) { Get-ChildItem -Path .\\docs\\assets -Exclude *.js | Remove-Item -Recurse -Force }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
