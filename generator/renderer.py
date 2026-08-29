@@ -34,15 +34,5 @@ def write_index_page(output: Path, categories: list[dict]) -> None:
 
         lines.append(f"- [{title}]({slug})")
 
-    lines.extend(
-        [
-            "",
-            "## Reports",
-            "",
-            "- [Generation report](generation-report)",
-            "",
-        ]
-    )
-
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("\n".join(lines), encoding="utf-8")

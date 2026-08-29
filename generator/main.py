@@ -113,11 +113,8 @@ def main() -> None:
     # ------------------------------------------------------------
 
     equipment_items = []
-    scanned = 0
 
     for path in scanner.discover_json(assets):
-        scanned += 1
-
         if not categories.is_equipment_item_path(path):
             continue
 
@@ -256,25 +253,6 @@ def main() -> None:
     renderer.write_index_page(
         docs / "index.md",
         category_pages,
-    )
-
-    # ------------------------------------------------------------
-    # Report
-    # ------------------------------------------------------------
-
-    icons_found = sum(bool(item["context"]["icon"]) for item in equipment_items)
-
-    md.write_generation_report(
-        docs / "generation-report.md",
-        scanned=scanned,
-        generated=len(equipment_items),
-        icons_found=icons_found,
-    )
-
-    print(
-        f"Scanned {scanned}; "
-        f"generated {len(equipment_items)} equipment items; "
-        f"icons {icons_found}."
     )
 
 
