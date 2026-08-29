@@ -1,4 +1,5 @@
 /docs/assets/*
+!/docs/assets/*.css
 !/docs/assets/*.js
 /docs/*.md
 

@@ -6,14 +6,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!headers.length || !tbody) return;
 
         headers.forEach((header, column) => {
-            const label = header.textContent.trim();
-
-            header.textContent = `${label} ↕`;
-            header.style.cursor = "pointer";
+            header.classList.add("sortable");
 
             header.addEventListener("click", () => {
                 const ascending = header.dataset.order !== "asc";
-
                 const rows = [...tbody.rows];
 
                 rows.sort((a, b) => {
@@ -40,16 +36,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 rows.forEach((row) => tbody.appendChild(row));
 
                 headers.forEach((other) => {
-                    const text = other.textContent.trim().replace(/[↕↑↓]$/, "").trim();
-
                     delete other.dataset.order;
-                    other.textContent = `${text} ↕`;
                 });
 
                 header.dataset.order = ascending ? "asc" : "desc";
-
-                const text = header.textContent.trim().replace(/[↕↑↓]$/, "").trim();
-                header.textContent = `${text} ${ascending ? "↑" : "↓"}`;
             });
         });
     });

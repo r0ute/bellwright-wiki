@@ -1,0 +1,21 @@
+.sortable {
+  cursor: pointer;
+  position: relative;
+  padding-right: 1.5em;
+}
+
+.sortable::after {
+  content: "↕";
+  position: absolute;
+  right: 0.5em;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.sortable[data-order="asc"]::after {
+  content: "↑";
+}
+
+.sortable[data-order="desc"]::after {
+  content: "↓";
+}
