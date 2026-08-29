@@ -16,5 +16,4 @@ EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Damage Type": damage_type,
     "Damage": field("Damage"),
     "ProjectileDamage": nested_field("ProjectileDamage", "Damage"),
-    "Rarity": lambda p, _ctx: asset_reference_name(p.get("Rarity")),
 }
