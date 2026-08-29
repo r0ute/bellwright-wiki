@@ -145,3 +145,17 @@ def enum_value(value) -> str:
         return ""
 
     return value.rsplit("::", 1)[-1]
+
+
+def tier(properties: dict[str, Any], context: dict[str, Any]) -> Any:
+    value = properties.get("Tier")
+    if value is not None:
+        return value
+
+    parts = str(context["path"]).replace("\\", "/").split("/")
+
+    for part in parts:
+        if part.startswith("Tier") and part[4:].isdigit():
+            return int(part[4:])
+
+    return ""

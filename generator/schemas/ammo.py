@@ -6,13 +6,14 @@ from generator.schemas.common import (
     damage_type,
     field,
     nested_field,
+    tier,
 )
 
 EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Icon": lambda _p, ctx: ctx["icon"],
     "Name": lambda _p, ctx: ctx["name"],
+    "Tier": tier,
     "Category": lambda p, _ctx: asset_reference_name(p.get("Category")),
-    "Tier": field("Tier"),
     "Damage Type": damage_type,
     "Damage": field("Damage"),
     "ProjectileDamage": nested_field("ProjectileDamage", "Damage"),
