@@ -1,7 +1,9 @@
 from pathlib import Path
 
+from generator.icons import copy_icon
 
-def write_index_page(output: Path, categories: list[dict]) -> None:
+
+def write_index_page(output: Path, categories: list[dict], logo: Path) -> None:
     """
     Write the root documentation index.
 
@@ -9,11 +11,23 @@ def write_index_page(output: Path, categories: list[dict]) -> None:
     equipment.md. The supplied categories are the child groups:
         Ammo, Armors, Clothing, Gear, Tools, Weapons
     """
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    logo_path = copy_icon(
+        logo,
+        output.parent / "assets",
+    )
+
+    logo_src = logo_path.relative_to(output.parent).as_posix()
+
     lines = [
         "---",
         "layout: default",
         "title: Bellwright Data",
         "---",
+        "",
+        f'<p align="center"><img src="{logo_src}" alt="Bellwright" width="96"></p>',
         "",
         "# Bellwright Data",
         "",
@@ -40,5 +54,4 @@ def write_index_page(output: Path, categories: list[dict]) -> None:
 
         lines.append(f"- [{title}]({slug})")
 
-    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("\n".join(lines), encoding="utf-8")
