@@ -4,22 +4,31 @@
   padding-right: 1.5em !important;
 }
 
+.sortable::before,
 .sortable::after {
   content: "";
   position: absolute;
   right: 0.5em;
-  top: 50%;
-  width: 0.45em;
-  height: 0.45em;
-  border-top: 2px solid currentColor;
-  border-right: 2px solid currentColor;
-  transform: translateY(-65%) rotate(-45deg);
+  width: 0;
+  height: 0;
+  border-left: 0.35em solid transparent;
+  border-right: 0.35em solid transparent;
+}
+
+.sortable::before {
+  top: calc(50% - 0.45em);
+  border-bottom: 0.4em solid currentColor;
+}
+
+.sortable::after {
+  top: calc(50% + 0.05em);
+  border-top: 0.4em solid currentColor;
 }
 
 .sortable[data-order="asc"]::after {
-  transform: translateY(15%) rotate(-45deg);
+  display: none;
 }
 
-.sortable[data-order="desc"]::after {
-  transform: translateY(-85%) rotate(135deg);
+.sortable[data-order="desc"]::before {
+  display: none;
 }
