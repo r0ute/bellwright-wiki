@@ -1,3 +1,5 @@
+/** table soring **/
+
 .sortable {
   cursor: pointer;
   position: relative;
@@ -41,12 +43,17 @@
   border-top-color: currentColor;
 }
 
+/** logo **/
+
 .logo {
   display: block;
   width: fit-content;
   margin: 0 auto;
-  animation: bell-ring 1s ease-in-out;
   transform-origin: top center;
+}
+
+.logo.ringing {
+  animation: bell-ring 1s ease-in-out;
 }
 
 @keyframes bell-ring {
