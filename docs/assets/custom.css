@@ -40,3 +40,47 @@
 .sortable[data-order="desc"]::after {
   border-top-color: currentColor;
 }
+
+.logo {
+  display: block;
+  width: fit-content;
+  margin: 0 auto;
+  animation: bell-ring 1s ease-in-out;
+  transform-origin: top center;
+}
+
+@keyframes bell-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  10% {
+    transform: rotate(8deg);
+  }
+  20% {
+    transform: rotate(-8deg);
+  }
+  30% {
+    transform: rotate(7deg);
+  }
+  40% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+  60% {
+    transform: rotate(-4deg);
+  }
+  70% {
+    transform: rotate(3deg);
+  }
+  80% {
+    transform: rotate(-2deg);
+  }
+  90% {
+    transform: rotate(1deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
