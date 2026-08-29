@@ -18,10 +18,13 @@ def load_objects(path: Path) -> list[dict]:
     return []
 
 
-def load_schema(slug: str):
+def load_schema(slug: str, fallback: bool = True):
     try:
         return importlib.import_module(f"generator.schemas.{slug}")
     except ImportError:
+        if not fallback:
+            return None
+
         try:
             return importlib.import_module("generator.schemas.default")
         except ImportError:
@@ -192,18 +195,37 @@ def main() -> None:
                     if scanner.normalize_category_key(item["Category"]) in child_scope
                 ]
 
-                schema = load_schema(scanner.category_slug(child_title))
+                # Try the child's own schema first.
+                schema = load_schema(
+                    scanner.category_slug(child_title),
+                    fallback=False,
+                )
 
+                # If no child-specific schema exists, use the group's schema.
                 if schema is None:
-                    schema = load_schema(slug)
+                    schema = load_schema(
+                        slug,
+                        fallback=False,
+                    )
+
+                # Only now fall back to default.py.
+                if schema is None:
+                    schema = load_schema("default")
 
                 headers, rows = render_items(items, schema)
 
                 sections[child_title] = (headers, rows)
 
         else:
-            # Group has no children: one table for the group itself.
-            schema = load_schema(slug)
+            # Group has no children: use the group's own schema,
+            # then default.py.
+            schema = load_schema(
+                slug,
+                fallback=False,
+            )
+
+            if schema is None:
+                schema = load_schema("default")
 
             headers, rows = render_items(group_items, schema)
 
