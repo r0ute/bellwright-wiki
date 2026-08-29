@@ -14,8 +14,8 @@ EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Tier": tier,
     "Armor Slot": lambda p, _ctx: enum_value(p.get("ArmorSlot")),
     "Armor": field("Armor"),
-    "MovementSpeedReduction": field("MovementSpeedReduction"),
-    "SkillRequirements": lambda p, _ctx: required_skill_value(
+    "Movement Speed Reduction": field("MovementSpeedReduction"),
+    "Skill Requirements": lambda p, _ctx: required_skill_value(
         p.get("SkillRequirements")
     ),
 }

@@ -13,7 +13,7 @@ EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Tier": tier,
     "Movement Speed Reduction": field("MovementSpeedReduction"),
     "Movement Acceleration Reduction": field("MovementAccelerationReduction"),
-    "SkillRequirements": lambda p, _ctx: required_skill_value(
+    "Skill Requirements": lambda p, _ctx: required_skill_value(
         p.get("SkillRequirements")
     ),
 }
