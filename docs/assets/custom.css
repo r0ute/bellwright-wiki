@@ -10,6 +10,8 @@
   right: 0.5em;
   top: 50%;
   transform: translateY(-50%);
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .sortable[data-order="asc"]::after {
