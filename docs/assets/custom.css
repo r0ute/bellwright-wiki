@@ -1,4 +1,4 @@
-/** table soring **/
+/** table sorting **/
 
 .sortable {
   cursor: pointer;
@@ -46,6 +46,7 @@
 /** logo **/
 
 .logo {
+  cursor: pointer;
   display: block;
   width: fit-content;
   margin: 0 auto;
