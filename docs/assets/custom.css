@@ -11,8 +11,8 @@
   right: 0.5em;
   width: 0;
   height: 0;
-  border-left: 0.35em solid transparent;
-  border-right: 0.35em solid transparent;
+  border-left: 0.25em solid transparent;
+  border-right: 0.25em solid transparent;
 }
 
 .sortable::before {
