@@ -152,7 +152,7 @@ def main() -> None:
                         try:
                             row[field_name] = extractor(props, ctx)
                         except Exception:
-                            row[field_name] = "—"
+                            row[field_name] = ""
                     rendered_rows.append(row)
 
                 rendered_rows = sorted(rendered_rows, key=lambda r: str(r.get("Name", "")).lower())
@@ -191,12 +191,12 @@ def main() -> None:
                         try:
                             row[field_name] = extractor(props, ctx)
                         except Exception:
-                            row[field_name] = "—"
+                            row[field_name] = ""
                 else:
                     row["Icon"] = ctx["icon"]
                     row["Name"] = ctx["name"]
                     row["Category"] = item.get("Category")
-                    row["Price"] = props.get("ExpectedPrice") or props.get("Price") or "—"
+                    row["Price"] = props.get("ExpectedPrice") or props.get("Price") or ""
 
                 rendered_rows.append(row)
 
@@ -273,7 +273,7 @@ def main() -> None:
                     try:
                         row[field_name] = extractor(props, ctx)
                     except Exception:
-                        row[field_name] = "—"
+                        row[field_name] = ""
                 rendered_rows.append(row)
         else:
             schema_fields = default_headers
@@ -282,7 +282,7 @@ def main() -> None:
                     "Icon": item["context"]["icon"],
                     "Name": item["context"]["name"],
                     "Category": item.get("Category"),
-                    "Price": item["properties"].get("ExpectedPrice") or item["properties"].get("Price") or "—",
+                    "Price": item["properties"].get("ExpectedPrice") or item["properties"].get("Price") or "",
                 }
                 for item in items
             ]
@@ -300,7 +300,7 @@ def main() -> None:
     renderer.write_index_page(DOCS / "index.md", category_pages)
 
     icons_found = sum(
-        item["context"]["icon"] != "—"
+        item["context"]["icon"] != ""
         for item in equipment_items
     )
 

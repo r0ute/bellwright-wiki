@@ -28,16 +28,16 @@ def weapon_type(properties: dict[str, Any]) -> str:
         if asset_path:
             return resolve_path_name(asset_path)
 
-        return weapon_type.get("ObjectName", "—")
+        return weapon_type.get("ObjectName", "")
 
-    return weapon_type or "—"
+    return weapon_type or ""
 
 
 def durability(properties: dict[str, Any], _context: dict[str, Any]) -> Any:
     return (
         extract_value(properties, "MaxDurability")
         or extract_value(properties, "Durability")
-        or "—"
+        or ""
     )
 
 
@@ -45,7 +45,7 @@ def price(properties: dict[str, Any], _context: dict[str, Any]) -> Any:
     return (
         extract_value(properties, "ExpectedPrice")
         or extract_value(properties, "Price")
-        or "—"
+        or ""
     )
 
 

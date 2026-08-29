@@ -3,7 +3,7 @@ from pathlib import Path
 
 def markdown_value(value) -> str:
     if value is None:
-        return "—"
+        return ""
 
     return str(value).replace("|", r"\|").replace("\n", " ")
 
@@ -14,18 +14,14 @@ def render_table(
 ) -> list[str]:
     lines = [
         "| " + " | ".join(headers) + " |",
-        "| "
-        + " | ".join(
-            ["---"] * 3 + ["---:"] * (len(headers) - 3)
-        )
-        + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
     ]
 
     for row in rows:
         lines.append(
             "| "
             + " | ".join(
-                markdown_value(row.get(header, "—"))
+                markdown_value(row.get(header, ""))
                 for header in headers
             )
             + " |"

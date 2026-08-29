@@ -145,7 +145,7 @@ def generate_equipment_item(
 
     icon = find_icon(properties, icon_index)
 
-    icon_md = "—"
+    icon_md = ""
 
     if icon:
         destination = copy_icon(icon, ICON_OUT)
