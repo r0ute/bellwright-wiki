@@ -3,17 +3,17 @@ from __future__ import annotations
 from generator.schemas.common import (
     FieldExtractor,
     field,
+    required_skill_value,
+    tier,
 )
 
 EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Icon": lambda _p, ctx: ctx["icon"],
     "Name": lambda _p, ctx: ctx["name"],
+    "Tier": tier,
     "Movement Speed Reduction": field("MovementSpeedReduction"),
     "Movement Acceleration Reduction": field("MovementAccelerationReduction"),
-    "Activated Mesh": field("ActivatedMesh"),
-    "Sheath Mesh": field("SheathMesh"),
-    "Carry Type": field("CarryType"),
-    "Damage": field("Damage"),
-    "Weapon Type": field("WeaponType"),
-    "Impact": field("Impact"),
+    "SkillRequirements": lambda p, _ctx: required_skill_value(
+        p.get("SkillRequirements")
+    ),
 }
