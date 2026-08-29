@@ -104,10 +104,6 @@ def write_generation_report(
         "# Generation Report\n\n"
         f"- JSON files scanned: {scanned}\n"
         f"- Equipment CDOs generated: {generated}\n"
-        f"- Icons found: {icons_found}\n\n"
-        "The generator processes equipment items under the main "
-        "`Items/Equipment` tree and groups them by the "
-        "category metadata in `Items/Categories/Equipment`. "
-        "Category definition assets are excluded from the item tables.\n",
+        f"- Icons found: {icons_found}.\n",
         encoding="utf-8",
     )

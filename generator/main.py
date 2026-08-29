@@ -1,10 +1,9 @@
-from pathlib import Path
-import json
 import importlib
+import json
+from pathlib import Path
 
-from generator import scanner
-from generator import renderer
 from generator import markdown as md
+from generator import renderer, scanner
 
 
 def main() -> None:
@@ -228,7 +227,7 @@ def main() -> None:
         md.write_page(
             DOCS / f"{slug}.md",
             title=title,
-            description=(f"{total} matching assets in the {title} category."),
+            description=(f"{total} matching assets."),
             headers=default_headers,
             sections=sections,
         )
@@ -307,9 +306,7 @@ def main() -> None:
         md.write_page(
             DOCS / f"{slug}.md",
             title=title,
-            description=(
-                f"{len(rendered_rows)} matching assets in the {title} category."
-            ),
+            description=(f"{len(rendered_rows)} matching assets."),
             headers=schema_fields,
             rows=rendered_rows,
         )
