@@ -12,3 +12,7 @@ Extracted and generated data from **Bellwright** game assets.
 - `generator/` — Data scanning, schemas, and Markdown generation code
 
 Generated documentation mirrors the extracted game category structure and includes item properties and icons.
+
+## Documentation
+
+[View the generated documentation](https://r0ute.github.io/bw-data/)
