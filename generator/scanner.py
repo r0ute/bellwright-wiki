@@ -1,16 +1,13 @@
-from pathlib import Path
 import json
 import re
-from typing import Iterator
+from pathlib import Path
 
 from generator.categories import (
     category_name_for_path,
     is_equipment_category_path,
-    is_equipment_category_group,
-    is_equipment_item_path,
 )
 from generator.discover import discover_json
-from generator.icons import build_icon_index, copy_icon, find_icon
+from generator.icons import copy_icon, find_icon
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"

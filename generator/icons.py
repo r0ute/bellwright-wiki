@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ICON_EXTENSIONS = ".webp"
 
 

@@ -2,8 +2,8 @@ import importlib
 import json
 from pathlib import Path
 
+from generator import categories, icons, renderer, scanner
 from generator import markdown as md
-from generator import renderer, scanner
 
 
 def main() -> None:
@@ -18,7 +18,7 @@ def main() -> None:
     print(f"Assets: {ASSETS}")
     print(f"Docs:   {DOCS}")
 
-    icon_index = scanner.build_icon_index(ASSETS)
+    icon_index = icons.build_icon_index(ASSETS)
     category_index = scanner.build_category_index(ASSETS)
 
     print(f"Icons indexed: {len(icon_index)}")
@@ -33,7 +33,7 @@ def main() -> None:
     for path in scanner.discover_json(ASSETS):
         scanned += 1
 
-        if not scanner.is_equipment_item_path(path):
+        if not categories.is_equipment_item_path(path):
             continue
 
         try:
@@ -81,7 +81,7 @@ def main() -> None:
 
     # Phase 1: groups
     for path in sorted(category_paths, key=lambda p: str(p).lower()):
-        if not scanner.is_equipment_category_group(path):
+        if not categories.is_equipment_category_group(path):
             continue
 
         try:
@@ -114,7 +114,7 @@ def main() -> None:
                     continue
 
                 child_path = path_by_key.get(child_key)
-                if child_path and scanner.is_equipment_category_group(child_path):
+                if child_path and categories.is_equipment_category_group(child_path):
                     continue
 
                 child_scope = scanner.category_row_scope(
@@ -234,7 +234,7 @@ def main() -> None:
 
     # Phase 2
     for path in sorted(category_paths, key=lambda p: str(p).lower()):
-        if scanner.is_equipment_category_group(path):
+        if categories.is_equipment_category_group(path):
             continue
 
         try:

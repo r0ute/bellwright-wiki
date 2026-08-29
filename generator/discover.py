@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Iterator
 
-
 JSON_EXTENSIONS = {".json"}
 ICON_EXTENSIONS = {".webp"}
 
