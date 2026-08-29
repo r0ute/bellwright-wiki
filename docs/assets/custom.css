@@ -17,12 +17,16 @@
 
 .sortable::before {
   top: calc(50% - 0.45em);
-  border-bottom: 0.4em solid currentColor;
+  border-bottom: 0.25em solid darkgray;
 }
 
 .sortable::after {
   top: calc(50% + 0.05em);
-  border-top: 0.4em solid currentColor;
+  border-top: 0.25em solid darkgray;
+}
+
+.sortable[data-order="asc"]::before {
+  border-bottom-color: currentColor;
 }
 
 .sortable[data-order="asc"]::after {
@@ -31,4 +35,8 @@
 
 .sortable[data-order="desc"]::before {
   display: none;
+}
+
+.sortable[data-order="desc"]::after {
+  border-top-color: currentColor;
 }
