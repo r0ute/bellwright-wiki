@@ -1,7 +1,7 @@
 # Bellwright Data
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/r0ute/bw-data/pages.yml)
-![GitHub last commit](https://img.shields.io/github/last-commit/r0ute/ba-enhancer)
+![GitHub last commit](https://img.shields.io/github/last-commit/r0ute/bw-data)
 
 Extracted and generated data from **Bellwright** game assets.
 
