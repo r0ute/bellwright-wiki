@@ -35,11 +35,9 @@ def _write_quest_page(path: Path, quest: Quest) -> None:
         )
 
         for index, step in enumerate(quest.steps, start=1):
-            title = step.title or step.name
-
             lines.extend(
                 [
-                    f"### {index}. {title}",
+                    f"### {index}. {step.name}",
                     "",
                 ]
             )
@@ -91,7 +89,6 @@ def _write_directory(
 ) -> None:
     directory.mkdir(parents=True, exist_ok=True)
 
-    # The quest belongs to this source directory.
     if node.quest is not None:
         _write_quest_page(
             directory / "index.md",
@@ -118,8 +115,6 @@ def _write_directory(
             )
         )
 
-    # A directory without a quest gets a normal directory index.
-    # A quest directory already has its quest page, so do not overwrite it.
     if node.quest is None:
         _write_index(
             directory / "index.md",
@@ -132,7 +127,6 @@ def write_category(
     docs: Path,
     category_slug: str,
     tree: QuestNode,
-    quests: list[Quest],
 ) -> None:
     """Write a quest category."""
 
@@ -153,12 +147,12 @@ def write_category(
         links.append(
             (
                 child.name,
-                f"{category_slug}/{key}/",
+                f"{key}/",
             )
         )
 
     _write_index(
-        docs / f"{category_slug}.md",
+        directory / "index.md",
         tree.name,
         links,
     )

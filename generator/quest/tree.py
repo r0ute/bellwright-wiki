@@ -1,4 +1,4 @@
-"""Build the quest directory tree from source asset paths."""
+"""Build the quest documentation tree from source asset paths."""
 
 import re
 
@@ -16,14 +16,11 @@ def build_tree(category: str, quests: list[Quest]) -> QuestNode:
     for quest in quests:
         node = root
 
-        # The source directory is authoritative. A quest's references are
-        # intentionally ignored so descendants cannot become direct children.
-        parts = [*quest.relative_path, quest.name]
-
-        for part in parts:
+        for part in quest.relative_path:
             key = slugify(part)
             if not key:
                 continue
+
             node = node.children.setdefault(
                 key,
                 QuestNode(name=part),

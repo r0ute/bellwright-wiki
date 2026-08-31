@@ -8,9 +8,7 @@ from pathlib import Path
 class QuestStep:
     name: str
     source: Path
-    title: str = ""
     summary: str = ""
-    type: str = ""
     group_next: bool = False
 
 
