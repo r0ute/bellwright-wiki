@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from generator.icons import copy_icon
+from generator.icon import copy_icon
 
 
 def write_index_page(output: Path, categories: list[dict], logo: Path) -> None:

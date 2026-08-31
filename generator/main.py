@@ -2,8 +2,15 @@ import importlib
 import json
 from pathlib import Path
 
-from generator import categories, icons, renderer, scanner
-from generator import markdown as md
+from generator import icon, renderer
+from generator.equipment import category as equipment_category
+from generator.equipment import markdown as equipment_markdown
+from generator.equipment import scanner as equipment_scanner
+
+ROOT = Path(__file__).resolve().parent.parent
+DOCS = ROOT / "docs"
+ASSETS = ROOT / "assets"
+ICON_OUT = DOCS / "assets" / "icons"
 
 
 def load_objects(path: Path) -> list[dict]:
@@ -20,13 +27,13 @@ def load_objects(path: Path) -> list[dict]:
 
 def load_schema(slug: str, fallback: bool = True):
     try:
-        return importlib.import_module(f"generator.schemas.{slug}")
+        return importlib.import_module(f"generator.equipment.schema.{slug}")
     except ImportError:
         if not fallback:
             return None
 
         try:
-            return importlib.import_module("generator.schemas.default")
+            return importlib.import_module("generator.equipment.schema.default")
         except ImportError:
             return None
 
@@ -59,9 +66,9 @@ def render_items(
 
 
 def main() -> None:
-    assets = scanner.ASSETS
-    docs = scanner.DOCS
-    icon_out = scanner.ICON_OUT
+    assets = ASSETS
+    docs = DOCS
+    icon_out = ICON_OUT
 
     docs.mkdir(parents=True, exist_ok=True)
 
@@ -82,10 +89,12 @@ def main() -> None:
     # Indexes
     # ------------------------------------------------------------
 
-    icon_index = icons.build_icon_index(assets)
-    category_index = scanner.build_category_index(assets)
+    icon_index = icon.build_icon_index(assets)
+    category_index = equipment_scanner.build_category_index(assets)
 
-    category_children, category_titles = scanner.build_category_hierarchy(assets)
+    category_children, category_titles = equipment_scanner.build_category_hierarchy(
+        assets
+    )
 
     print(f"Icons indexed: {len(icon_index)}")
     print(f"Categories indexed: {len(category_titles)}")
@@ -96,8 +105,8 @@ def main() -> None:
 
     equipment_items = []
 
-    for path in scanner.discover_json(assets):
-        if not categories.is_equipment_item_path(path):
+    for path in equipment_scanner.discover_json(assets):
+        if not equipment_category.is_equipment_item_path(path):
             continue
 
         try:
@@ -106,15 +115,12 @@ def main() -> None:
             print(f"SKIP {path}: {exc}")
             continue
 
-        if not scanner.find_cdo(objects):
+        if not equipment_scanner.find_cdo(objects):
             continue
 
         try:
-            item = scanner.generate_equipment_item(
-                path,
-                objects,
-                icon_index,
-                category_index,
+            item = equipment_scanner.generate_equipment_item(
+                path, objects, icon_index, category_index, icon_out
             )
         except Exception as exc:
             print(f"SKIP {path}: {exc}")
@@ -135,10 +141,10 @@ def main() -> None:
 
     for group_key in group_keys:
         title = category_titles[group_key]
-        slug = scanner.category_slug(title)
+        slug = equipment_scanner.category_slug(title)
 
         # All descendants belong to this group.
-        scope = scanner.category_row_scope(
+        scope = equipment_scanner.category_row_scope(
             title,
             category_children,
             category_titles,
@@ -147,7 +153,7 @@ def main() -> None:
         group_items = [
             item
             for item in equipment_items
-            if scanner.normalize_category_key(item["Category"]) in scope
+            if equipment_scanner.normalize_category_key(item["Category"]) in scope
         ]
 
         sections = {}
@@ -162,7 +168,7 @@ def main() -> None:
             for child_key in child_keys:
                 child_title = category_titles[child_key]
 
-                child_scope = scanner.category_row_scope(
+                child_scope = equipment_scanner.category_row_scope(
                     child_title,
                     category_children,
                     category_titles,
@@ -171,12 +177,13 @@ def main() -> None:
                 items = [
                     item
                     for item in group_items
-                    if scanner.normalize_category_key(item["Category"]) in child_scope
+                    if equipment_scanner.normalize_category_key(item["Category"])
+                    in child_scope
                 ]
 
                 # Try the child's own schema first.
                 schema = load_schema(
-                    scanner.category_slug(child_title),
+                    equipment_scanner.category_slug(child_title),
                     fallback=False,
                 )
 
@@ -212,7 +219,7 @@ def main() -> None:
 
         total = sum(len(rows) for _, rows in sections.values())
 
-        md.write_page(
+        equipment_markdown.write_page(
             docs / f"{slug}.md",
             title=title,
             description=f"{total} matching assets",

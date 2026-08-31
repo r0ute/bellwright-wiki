@@ -2,14 +2,10 @@ import json
 import re
 from pathlib import Path
 
-from generator.categories import is_equipment_category_path
 from generator.discover import discover_json
-from generator.icons import copy_icon, find_icon
 
-ROOT = Path(__file__).resolve().parent.parent
-ASSETS = ROOT / "assets"
-DOCS = ROOT / "docs"
-ICON_OUT = DOCS / "assets" / "icons"
+from generator.equipment.category import is_equipment_category_path
+from generator.icon import copy_icon, find_icon
 
 
 def find_cdo(objects: list) -> dict | None:
@@ -186,6 +182,7 @@ def generate_equipment_item(
     objects: list,
     icon_index: dict[str, Path],
     category_index: dict[str, str],
+    icon_out: Path,
 ) -> dict:
     cdo = find_cdo(objects)
 
@@ -206,7 +203,7 @@ def generate_equipment_item(
     icon_md = ""
 
     if icon:
-        destination = copy_icon(icon, ICON_OUT)
+        destination = copy_icon(icon, icon_out)
 
         icon_md = f'<img src="assets/icons/{destination.name}" alt="{name}" width="48">'
 
