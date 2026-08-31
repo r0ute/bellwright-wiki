@@ -175,7 +175,7 @@ def _write_quest_page(
 def _write_index(
     path: Path,
     title: str,
-    links: list[tuple[str, str]],
+    index_lines: list[str],
 ) -> None:
     path.parent.mkdir(
         parents=True,
@@ -192,7 +192,7 @@ def _write_index(
         "",
     ]
 
-    lines.extend(f"- [{name}]({link})" for name, link in links)
+    lines.extend(index_lines)
 
     lines.append("")
 
@@ -217,32 +217,38 @@ def _write_directory(
             node.quest,
         )
 
-    links = []
-
     for key, child in sorted(
         node.children.items(),
         key=lambda item: item[1].name.casefold(),
     ):
-        child_directory = directory / key
-
         _write_directory(
             child,
-            child_directory,
+            directory / key,
         )
 
-        links.append(
-            (
-                child.name,
-                f"{key}/",
+
+def _write_tree(
+    lines: list[str],
+    node: QuestNode,
+    prefix: str = "",
+    indent: int = 0,
+) -> None:
+    for key, child in sorted(
+        node.children.items(),
+        key=lambda item: item[1].name.casefold(),
+    ):
+        padding = "  " * indent
+
+        if child.quest is not None:
+            lines.append(f"{padding}- [{child.name}]({prefix}{key}/)")
+        else:
+            lines.append(f"{padding}- {child.name}")
+            _write_tree(
+                lines,
+                child,
+                f"{prefix}{key}/",
+                indent + 1,
             )
-        )
-
-    if node.quest is None:
-        _write_index(
-            directory / "index.md",
-            node.name,
-            links,
-        )
 
 
 def write_category(
@@ -263,21 +269,15 @@ def write_category(
         directory,
     )
 
-    links = []
+    index_lines: list[str] = []
 
-    for key, child in sorted(
-        tree.children.items(),
-        key=lambda item: item[1].name.casefold(),
-    ):
-        links.append(
-            (
-                child.name,
-                f"{key}/",
-            )
-        )
+    _write_tree(
+        index_lines,
+        tree,
+    )
 
     _write_index(
         directory / "index.md",
         tree.name,
-        links,
+        index_lines,
     )
