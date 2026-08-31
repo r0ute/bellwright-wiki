@@ -10,6 +10,7 @@ class QuestStep:
     source: Path
     summary: str = ""
     group_next: bool = False
+    type: str = ""
 
 
 @dataclass(frozen=True)

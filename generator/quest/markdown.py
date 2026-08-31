@@ -31,44 +31,20 @@ def _write_parallel_steps(
     number: int,
     steps: list[QuestStep],
 ) -> None:
-    lines.extend(
-        [
-            '<div class="quest-parallel">',
-            "",
-        ]
-    )
+    lines.append("{:.quest-parallel}")
+    lines.append("")
 
     for offset, step in enumerate(steps):
         lines.extend(
             [
-                '<div class="quest-parallel-step">',
-                "",
-                f"### {number + offset}. {step.name}",
-                "",
+                f"- **{number + offset}. {step.name}**",
             ]
         )
 
         if step.summary:
-            lines.extend(
-                [
-                    step.summary,
-                    "",
-                ]
-            )
+            lines.append(f"  {step.summary}")
 
-        lines.extend(
-            [
-                "</div>",
-                "",
-            ]
-        )
-
-    lines.extend(
-        [
-            "</div>",
-            "",
-        ]
-    )
+    lines.append("")
 
 
 def _write_steps(
@@ -91,19 +67,37 @@ def _write_steps(
             index += 1
             continue
 
-        group = []
+        group = [step]
+        group_type = step.type
 
-        while index < len(steps) and steps[index].group_next:
-            group.append(steps[index])
+        while index + 1 < len(steps):
+            next_step = steps[index + 1]
+
+            if not step.group_next:
+                break
+
+            if next_step.type != group_type:
+                break
+
             index += 1
+            step = next_step
+            group.append(step)
 
-        _write_parallel_steps(
-            lines,
-            number,
-            group,
-        )
+        if len(group) == 1:
+            _write_step(
+                lines,
+                number,
+                group[0],
+            )
+        else:
+            _write_parallel_steps(
+                lines,
+                number,
+                group,
+            )
 
         number += len(group)
+        index += 1
 
 
 def _write_quest_page(

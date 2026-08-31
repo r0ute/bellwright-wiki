@@ -129,7 +129,7 @@ def _class_name(value) -> str:
 
 def _subquests(
     obj: dict,
-) -> list[tuple[str, bool]]:
+) -> list[tuple[str, str, bool]]:
     values = _properties(obj).get("Subquests")
 
     if not isinstance(values, list):
@@ -146,9 +146,15 @@ def _subquests(
         if not name:
             continue
 
+        quest_type = value.get("Type", "")
+
+        if not isinstance(quest_type, str):
+            quest_type = ""
+
         result.append(
             (
                 name,
+                quest_type,
                 bool(
                     value.get(
                         "bGroupNext",
@@ -248,7 +254,7 @@ def _step_title(
 def _resolve_steps(
     directory: Path,
     quest_title: str,
-    subquests: list[tuple[str, bool]],
+    subquests: list[tuple[str, str, bool]],
 ) -> tuple[QuestStep, ...]:
     files = {}
 
@@ -265,13 +271,12 @@ def _resolve_steps(
                 )
                 break
 
-    step_names = [name for name, _ in subquests]
+    step_names = [name for name, _, _ in subquests]
 
     prefix = _common_prefix(step_names)
-
     steps = []
 
-    for name, group_next in subquests:
+    for name, quest_type, group_next in subquests:
         entry = files.get(name)
 
         if entry is None:
@@ -294,6 +299,7 @@ def _resolve_steps(
                 source=source,
                 summary=_description(step_object),
                 group_next=group_next,
+                type=quest_type,
             )
         )
 

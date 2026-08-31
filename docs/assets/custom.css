@@ -114,9 +114,8 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
-  margin: 1rem 0;
 }
 
-.quest-parallel-step {
-  min-width: 0;
+.quest-parallel > li {
+  margin: 0;
 }
