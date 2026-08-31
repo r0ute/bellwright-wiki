@@ -346,9 +346,9 @@ def _category(
     configured = {
         name.casefold(): (
             name,
-            slug,
+            name.lower(),
         )
-        for name, slug in categories.items()
+        for name in categories
     }
 
     for part in relative.parts:

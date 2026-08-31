@@ -6,10 +6,7 @@ from .markdown import write_category
 from .scanner import discover_quests
 from .tree import build_tree
 
-QUEST_CATEGORIES = {
-    "MainQuest": "main-quest",
-    "SideQuests": "side-quests",
-}
+QUEST_CATEGORIES = {"MainQuest", "SideQuests", "Liberation", "RaidMap"}
 
 TITLE = "Quests"
 
@@ -39,7 +36,8 @@ def generate(
 
     pages = []
 
-    for category, slug in QUEST_CATEGORIES.items():
+    for category in QUEST_CATEGORIES:
+        slug = category.lower()
         quests = quests_by_category[category]
 
         tree = build_tree(
