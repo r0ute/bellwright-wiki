@@ -46,22 +46,28 @@ def _usable_object_name(value: str) -> str:
     return value.strip()
 
 
-def _properties(obj: dict) -> dict:
-    value = obj.get("Properties")
-    return value if isinstance(value, dict) else {}
+def _is_quest_object(obj: dict) -> bool:
+    value = obj.get("Type")
+
+    if not isinstance(value, str):
+        return False
+
+    return "quest" in value.casefold()
 
 
 def _quest_object(
     objects: list[dict],
 ) -> dict | None:
     for obj in objects:
-        if isinstance(
-            obj.get("Properties"),
-            dict,
-        ):
+        if _is_quest_object(obj):
             return obj
 
     return None
+
+
+def _properties(obj: dict) -> dict:
+    value = obj.get("Properties")
+    return value if isinstance(value, dict) else {}
 
 
 def _text(value) -> str:
@@ -70,17 +76,16 @@ def _text(value) -> str:
 
     if isinstance(value, dict):
         for key in (
-            "LocalizedString",
             "SourceString",
-            "CultureInvariantString",
+            "LocalizedString",
             "StringTableEntry",
             "Value",
             "Text",
         ):
-            result = value.get(key)
+            result = _text(value.get(key))
 
-            if isinstance(result, str) and result.strip():
-                return result.strip()
+            if result:
+                return result
 
     return ""
 
@@ -99,14 +104,11 @@ def _description(obj: dict) -> str:
     for key, value in properties.items():
         if key.casefold().endswith("taskdescription"):
             text = _text(value)
+
             if text:
                 return text
 
-    text = _text(properties.get("Description"))
-    if text:
-        return text
-
-    return ""
+    return _text(properties.get("Description"))
 
 
 def _class_name(value) -> str:
@@ -167,34 +169,6 @@ def _subquests(
     return result
 
 
-def _common_prefix(
-    names: list[str],
-) -> str:
-    if not names:
-        return ""
-
-    prefix = names[0]
-
-    for name in names[1:]:
-        length = 0
-
-        for left, right in zip(
-            prefix,
-            name,
-        ):
-            if left != right:
-                break
-
-            length += 1
-
-        prefix = prefix[:length]
-
-        if not prefix:
-            break
-
-    return prefix
-
-
 def _split_words(value: str) -> list[str]:
     words = []
     word = ""
@@ -226,17 +200,24 @@ def _split_words(value: str) -> list[str]:
 
 
 def _fallback_step_title(
-    prefix: str,
+    quest_name: str,
     step_name: str,
 ) -> str:
-    name = step_name[len(prefix) :].lstrip("_")
+    name = step_name
+
+    if name.startswith(f"{quest_name}_"):
+        name = name[len(quest_name) + 1 :]
+    elif name.startswith(quest_name):
+        name = name[len(quest_name) :]
+
+    name = name.lstrip("_")
 
     return " ".join(_split_words(name)).strip()
 
 
 def _step_title(
+    quest_name: str,
     quest_title: str,
-    prefix: str,
     step_name: str,
     step_object: dict,
 ) -> str:
@@ -246,13 +227,14 @@ def _step_title(
         return title
 
     return _fallback_step_title(
-        prefix,
+        quest_name,
         step_name,
     )
 
 
 def _resolve_steps(
     directory: Path,
+    quest_name: str,
     quest_title: str,
     subquests: list[tuple[str, str, bool]],
 ) -> tuple[QuestStep, ...]:
@@ -271,9 +253,6 @@ def _resolve_steps(
                 )
                 break
 
-    step_names = [name for name, _, _ in subquests]
-
-    prefix = _common_prefix(step_names)
     steps = []
 
     for name, quest_type, group_next in subquests:
@@ -291,15 +270,15 @@ def _resolve_steps(
         steps.append(
             QuestStep(
                 name=_step_title(
+                    quest_name,
                     quest_title,
-                    prefix,
                     name,
                     step_object,
                 ),
                 source=source,
                 summary=_description(step_object),
-                group_next=group_next,
                 type=quest_type,
+                group_next=group_next,
             )
         )
 
@@ -368,9 +347,10 @@ def discover_quests(
         if quest_object is None:
             continue
 
-        subquests = _properties(quest_object).get("Subquests")
-
-        if not isinstance(subquests, list):
+        if not isinstance(
+            _properties(quest_object).get("Subquests"),
+            list,
+        ):
             continue
 
         category_name, _ = category
@@ -395,6 +375,7 @@ def discover_quests(
                 summary=_summary(quest_object),
                 steps=_resolve_steps(
                     path.parent,
+                    name,
                     title,
                     _subquests(quest_object),
                 ),
