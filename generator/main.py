@@ -11,10 +11,10 @@ ICON_OUT = DOCS / "assets" / "icons"
 
 
 def clean_output() -> None:
-    """Remove generated documentation and icons."""
+    """Remove generated documentation and assets."""
     DOCS.mkdir(parents=True, exist_ok=True)
 
-    for path in DOCS.glob("*.md"):
+    for path in DOCS.rglob("*.md"):
         path.unlink()
 
     if ICON_OUT.exists():

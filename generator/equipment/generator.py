@@ -95,8 +95,9 @@ def _item_context(
             icon_path,
             icon_out,
         )
+
         context["icon"] = (
-            f'<img src="assets/icons/{destination.name}" '
+            f'<img src="../assets/icons/{destination.name}" '
             f'alt="{item["path"].stem}" width="48">'
         )
 
@@ -234,7 +235,6 @@ def generate(
 ) -> dict:
     """Generate equipment documentation."""
     category_index = category.build_category_index(assets)
-
     category_children, category_titles = category.build_category_hierarchy(assets)
 
     print(f"Equipment categories indexed: {len(category_titles)}")
@@ -245,6 +245,11 @@ def generate(
     )
 
     pages = []
+    equipment_docs = docs / "equipment"
+    equipment_docs.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     group_keys = sorted(
         category_children.get("equipment", ()),
@@ -269,7 +274,7 @@ def generate(
         total = sum(len(rows) for _, rows in sections.values())
 
         markdown.write_page(
-            docs / f"{slug}.md",
+            equipment_docs / f"{slug}.md",
             title=title,
             description=f"{total} matching assets",
             sections=sections,
@@ -278,11 +283,11 @@ def generate(
         pages.append(
             {
                 "title": title,
-                "slug": slug,
+                "slug": f"equipment/{slug}.md",
             }
         )
 
-        print(f"\tGENERATED {slug}.md ({total} items)")
+        print(f"\tGENERATED equipment/{slug}.md ({total} items)")
 
     return {
         "title": TITLE,
