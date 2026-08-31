@@ -108,3 +108,15 @@
 .data-groups ul {
   margin-top: 0.5rem;
 }
+
+/**  parallel quest steps **/
+.quest-parallel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.quest-parallel-step {
+  min-width: 0;
+}
