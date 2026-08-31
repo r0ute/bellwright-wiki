@@ -3,20 +3,7 @@ from pathlib import Path
 from generator.icon import copy_icon
 
 
-def write_index_page(output: Path, equipment_pages: list[dict], logo: Path) -> None:
-    """
-    Write the root documentation index.
-    """
-
-    output.parent.mkdir(parents=True, exist_ok=True)
-
-    logo_path = copy_icon(
-        logo,
-        output.parent / "assets",
-    )
-
-    logo_src = logo_path.relative_to(output.parent).as_posix()
-
+def _index_lines(equipment_pages: list[dict], logo_src: str) -> list[str]:
     lines = [
         "---",
         "layout: default",
@@ -38,12 +25,38 @@ def write_index_page(output: Path, equipment_pages: list[dict], logo: Path) -> N
         "",
     ]
 
-    for category in sorted(
-        equipment_pages,
-        key=lambda item: item["title"].lower(),
-    ):
-        title = category["title"]
-        slug = category["slug"]
-        lines.append(f"- [{title}]({slug})")
+    lines.extend(
+        f"- [{page['title']}]({page['slug']})"
+        for page in sorted(
+            equipment_pages,
+            key=lambda page: page["title"].lower(),
+        )
+    )
 
-    output.write_text("\n".join(lines), encoding="utf-8")
+    return lines
+
+
+def write_index_page(
+    output: Path,
+    equipment_pages: list[dict],
+    logo: Path,
+) -> None:
+    """Write the root documentation index."""
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    logo_path = copy_icon(
+        logo,
+        output.parent / "assets",
+    )
+
+    logo_src = logo_path.relative_to(output.parent).as_posix()
+
+    output.write_text(
+        "\n".join(
+            _index_lines(
+                equipment_pages,
+                logo_src,
+            )
+        ),
+        encoding="utf-8",
+    )
