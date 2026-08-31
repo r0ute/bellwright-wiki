@@ -4,7 +4,6 @@ from .common import (
     FieldExtractor,
     asset_reference_name,
     context_field,
-    damage_type,
     field,
     nested_field,
     tier,
@@ -18,7 +17,7 @@ EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
         "Category",
         transform=asset_reference_name,
     ),
-    "Damage Type": damage_type,
+    "Damage Type": field("DamageType", transform=asset_reference_name),
     "Damage": field("Damage"),
     "Projectile Damage": nested_field(
         "ProjectileDamage",

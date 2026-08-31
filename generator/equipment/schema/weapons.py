@@ -16,6 +16,7 @@ EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
         "Rarity",
         transform=asset_reference_name,
     ),
+    "Damage Type": field("DamageType", transform=asset_reference_name),
     "Damage": field("Damage"),
     "Speed": field("WeaponSpeed"),
     "Length": field("WeaponLength"),

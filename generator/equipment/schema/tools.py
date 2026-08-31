@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from .common import (
     FieldExtractor,
+    asset_reference_name,
     context_field,
-    damage_type,
     field,
     tier,
 )
@@ -12,6 +12,6 @@ EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Icon": context_field("icon"),
     "Name": field("Name"),
     "Tier": tier,
+    "Damage Type": field("DamageType", transform=asset_reference_name),
     "Damage": field("Damage"),
-    "Damage Type": damage_type,
 }

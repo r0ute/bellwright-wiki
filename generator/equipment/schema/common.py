@@ -6,7 +6,6 @@ from typing import Any
 FieldExtractor = Callable[[dict[str, Any], dict[str, Any]], Any]
 ValueTransformer = Callable[[Any], Any]
 
-DAMAGE_TYPES = ("Piercing", "Blunt", "Cutting", "Pickaxe", "Axe")
 ASSET_REFERENCE_KEYS = ("ObjectPath", "AssetPathName", "ObjectName")
 VALUE_KEYS = (
     "LocalizedString",
@@ -114,19 +113,6 @@ def required_skill_value(requirements: Any) -> str:
     ]
 
     return ", ".join(values)
-
-
-def damage_type(
-    properties: dict[str, Any],
-    _context: dict[str, Any],
-) -> str:
-    """Resolve the normalized damage type from the DamageType reference."""
-    name = asset_reference_name(properties.get("DamageType"))
-
-    return next(
-        (damage for damage in DAMAGE_TYPES if damage.lower() in name.lower()),
-        "",
-    )
 
 
 # ---------------------------------------------------------------------------
