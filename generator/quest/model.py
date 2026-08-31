@@ -5,11 +5,24 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
+class QuestStep:
+    name: str
+    source: Path
+    title: str = ""
+    summary: str = ""
+    type: str = ""
+    group_next: bool = False
+
+
+@dataclass(frozen=True)
 class Quest:
     name: str
     category: str
     source: Path
     relative_path: tuple[str, ...]
+    title: str
+    summary: str = ""
+    steps: tuple[QuestStep, ...] = field(default_factory=tuple)
 
 
 @dataclass

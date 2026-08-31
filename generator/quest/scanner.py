@@ -1,11 +1,11 @@
-"""Discover and filter quest assets."""
+"""Discover quests and resolve their ordered subquests."""
 
 import json
 import re
 from pathlib import Path
 
 from ..discover import discover_json
-from .model import Quest
+from .model import Quest, QuestStep
 
 
 def _load_objects(path: Path) -> list[dict]:
@@ -26,9 +26,20 @@ def _load_objects(path: Path) -> list[dict]:
     return []
 
 
+def _objects_by_name(path: Path) -> dict[str, dict]:
+    return {
+        name: obj
+        for obj in _load_objects(path)
+        if (name := _usable_object_name(_object_name(obj)))
+    }
+
+
 def _is_quest_object(obj: dict) -> bool:
     object_type = obj.get("Type")
-    return isinstance(object_type, str) and "quest" in object_type.casefold()
+    if not isinstance(object_type, str):
+        return False
+
+    return "quest" in object_type.casefold()
 
 
 def _text(value) -> str:
@@ -38,8 +49,8 @@ def _text(value) -> str:
     if isinstance(value, dict):
         for key in (
             "SourceString",
-            "StringTableEntry",
             "LocalizedString",
+            "StringTableEntry",
             "Value",
             "Text",
         ):
@@ -50,17 +61,9 @@ def _text(value) -> str:
     return ""
 
 
-def _property_name(obj: dict) -> str:
+def _properties(obj: dict) -> dict:
     properties = obj.get("Properties")
-    if not isinstance(properties, dict):
-        return ""
-
-    for key in ("QuestName", "DisplayName", "Title", "Name"):
-        value = _text(properties.get(key))
-        if value:
-            return value
-
-    return ""
+    return properties if isinstance(properties, dict) else {}
 
 
 def _object_name(obj: dict) -> str:
@@ -81,14 +84,6 @@ def _quest_name(path: Path, objects: list[dict]) -> str:
         if not _is_quest_object(obj):
             continue
 
-        value = _property_name(obj)
-        if value:
-            return value
-
-    for obj in objects:
-        if not _is_quest_object(obj):
-            continue
-
         value = _usable_object_name(_object_name(obj))
         if value:
             return value
@@ -96,7 +91,90 @@ def _quest_name(path: Path, objects: list[dict]) -> str:
     return path.stem
 
 
-def _category(relative: Path, categories: list[str]) -> tuple[str, str] | None:
+def _quest_object(objects: list[dict]) -> dict | None:
+    for obj in objects:
+        if _is_quest_object(obj):
+            return obj
+
+    return None
+
+
+def _title(obj: dict) -> str:
+    return _text(_properties(obj).get("Title"))
+
+
+def _summary(obj: dict) -> str:
+    return _text(_properties(obj).get("Summary"))
+
+
+def _class_name(value) -> str:
+    if not isinstance(value, dict):
+        return ""
+
+    object_name = value.get("ObjectName")
+    if not isinstance(object_name, str):
+        return ""
+
+    match = re.search(r"BlueprintGeneratedClass'([^']+)'", object_name)
+    if match:
+        return _usable_object_name(match.group(1))
+
+    return ""
+
+
+def _subquest_names(obj: dict) -> list[tuple[str, bool]]:
+    properties = _properties(obj)
+    subquests = properties.get("Subquests")
+
+    if not isinstance(subquests, list):
+        return []
+
+    result = []
+
+    for subquest in subquests:
+        if not isinstance(subquest, dict):
+            continue
+
+        quest_class = _class_name(subquest.get("QuestClass"))
+        if not quest_class:
+            continue
+
+        result.append(
+            (
+                quest_class,
+                bool(subquest.get("bGroupNext", False)),
+            )
+        )
+
+    return result
+
+
+def _build_step(
+    name: str,
+    source: Path,
+    objects: list[dict],
+    group_next: bool,
+) -> QuestStep:
+    obj = _quest_object(objects)
+
+    if obj is None:
+        return QuestStep(
+            name=name,
+            source=source,
+            group_next=group_next,
+        )
+
+    return QuestStep(
+        name=name,
+        source=source,
+        title=_title(obj),
+        summary=_summary(obj),
+        type=str(obj.get("Type", "")),
+        group_next=group_next,
+    )
+
+
+def _category(relative: Path, categories: dict[str, str]) -> tuple[str, str] | None:
     configured = {name.casefold(): (name, slug) for name, slug in categories.items()}
 
     for part in relative.parts:
@@ -107,24 +185,78 @@ def _category(relative: Path, categories: list[str]) -> tuple[str, str] | None:
     return None
 
 
-def _relative_tree_path(relative: Path, category: str) -> tuple[str, ...]:
+def _relative_tree_path(
+    relative: Path,
+    category: str,
+) -> tuple[str, ...]:
     parts = list(relative.parts)
+
     category_index = next(
         index
         for index, part in enumerate(parts)
         if part.casefold() == category.casefold()
     )
 
-    # JSON filename is the quest asset; everything before it is its
-    # source hierarchy below MainQuest/SideQuests.
     return tuple(parts[category_index + 1 : -1])
 
 
-def discover_quests(assets: Path, categories: list[str]) -> dict[str, list[Quest]]:
-    """Discover quests only inside configured quest categories."""
+def _resolve_step_files(
+    directory: Path,
+    subquests: list[tuple[str, bool]],
+) -> tuple[QuestStep, ...]:
+    files = {}
+
+    for path in directory.glob("*.json"):
+        objects = _load_objects(path)
+
+        for obj in objects:
+            name = _usable_object_name(_object_name(obj))
+            if name:
+                files[name] = (path, objects)
+                break
+
+    steps = []
+
+    for name, group_next in subquests:
+        entry = files.get(name)
+
+        if entry is None:
+            continue
+
+        source, objects = entry
+        steps.append(
+            _build_step(
+                name=name,
+                source=source,
+                objects=objects,
+                group_next=group_next,
+            )
+        )
+
+    return tuple(steps)
+
+
+def _is_root_quest(path: Path, objects: list[dict]) -> bool:
+    obj = _quest_object(objects)
+    if obj is None:
+        return False
+
+    properties = _properties(obj)
+
+    return isinstance(properties.get("Subquests"), list)
+
+
+def discover_quests(
+    assets: Path,
+    categories: dict[str, str],
+) -> dict[str, list[Quest]]:
+    """Discover root quests and resolve their ordered subquests."""
+
     result = {category: [] for category in categories}
 
-    for path in discover_json(assets):
+    json_files = list(discover_json(assets))
+
+    for path in json_files:
         try:
             relative = path.relative_to(assets)
         except ValueError:
@@ -135,16 +267,38 @@ def discover_quests(assets: Path, categories: list[str]) -> dict[str, list[Quest
             continue
 
         objects = _load_objects(path)
-        if not any(_is_quest_object(obj) for obj in objects):
+
+        if not _is_root_quest(path, objects):
+            continue
+
+        quest_object = _quest_object(objects)
+        if quest_object is None:
             continue
 
         category_name, _ = category
+
+        name = _quest_name(path, objects)
+        properties = _properties(quest_object)
+
+        subquests = _subquest_names(quest_object)
+
+        steps = _resolve_step_files(
+            path.parent,
+            subquests,
+        )
+
         result[category_name].append(
             Quest(
-                name=_quest_name(path, objects),
+                name=name,
                 category=category_name,
                 source=path,
-                relative_path=_relative_tree_path(relative, category_name),
+                relative_path=_relative_tree_path(
+                    relative,
+                    category_name,
+                ),
+                title=_title(quest_object) or name,
+                summary=_summary(quest_object),
+                steps=steps,
             )
         )
 
@@ -152,6 +306,7 @@ def discover_quests(assets: Path, categories: list[str]) -> dict[str, list[Quest
         quests.sort(
             key=lambda quest: (
                 tuple(part.casefold() for part in quest.relative_path),
+                quest.title.casefold(),
                 quest.name.casefold(),
                 quest.source.as_posix().casefold(),
             )
