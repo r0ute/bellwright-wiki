@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from generator.schema.common import (
+from generator.equipment.schema.common import (
     FieldExtractor,
     asset_reference_name,
     damage_type,

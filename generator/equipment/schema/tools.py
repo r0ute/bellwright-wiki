@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from generator.schema.common import FieldExtractor, damage_type, field, tier
+from generator.equipment.schema.common import FieldExtractor, damage_type, field, tier
 
 EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Icon": lambda _p, ctx: ctx["icon"],

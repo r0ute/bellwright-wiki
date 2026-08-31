@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from generator.schema.common import (
+from generator.equipment.schema.common import (
     FieldExtractor,
     field,
     required_skill_value,
