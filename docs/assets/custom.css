@@ -115,7 +115,7 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
 
-  margin: 1rem 0;
+  margin-bottom: 0 !important;
   padding-left: 0 !important;
   list-style: none;
 }
