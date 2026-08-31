@@ -3,6 +3,7 @@ from __future__ import annotations
 from generator.equipment.schema.common import (
     FieldExtractor,
     asset_reference_name,
+    context_field,
     damage_type,
     field,
     nested_field,
@@ -10,10 +11,10 @@ from generator.equipment.schema.common import (
 )
 
 EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
-    "Icon": lambda _p, ctx: ctx["icon"],
-    "Name": lambda _p, ctx: ctx["name"],
+    "Icon": context_field("icon"),
+    "Name": context_field("name"),
     "Tier": tier,
-    "Category": lambda p, _ctx: asset_reference_name(p.get("Category")),
+    "Category": field("Category", transform=asset_reference_name),
     "Damage Type": damage_type,
     "Damage": field("Damage"),
     "Projectile Damage": nested_field("ProjectileDamage", "Damage"),

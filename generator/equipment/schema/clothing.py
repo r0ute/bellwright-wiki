@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from generator.equipment.schema.common import (
     FieldExtractor,
+    context_field,
     enum_value,
     field,
     tier,
 )
 
 EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
-    "Icon": lambda _p, ctx: ctx["icon"],
-    "Name": lambda _p, ctx: ctx["name"],
+    "Icon": context_field("icon"),
+    "Name": context_field("name"),
     "Tier": tier,
-    "Armor Slot": lambda p, _ctx: enum_value(p.get("ArmorSlot")),
+    "Armor Slot": field("ArmorSlot", transform=enum_value),
     "Armor": field("Armor"),
 }
