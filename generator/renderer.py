@@ -1,17 +1,62 @@
 from pathlib import Path
 
-from generator.icons import copy_icon
+from generator.icon import copy_icon
 
 
-def write_index_page(output: Path, categories: list[dict], logo: Path) -> None:
-    """
-    Write the root documentation index.
+def _render_group(group: dict) -> list[str]:
+    """Render one generator group."""
+    lines = [
+        '<div class="data-group" markdown="1">',
+        "",
+        f"## {group['title']}",
+        "",
+    ]
 
-    Equipment is represented by index.md and is never emitted as
-    equipment.md. The supplied categories are the child groups:
-        Ammo, Armors, Clothing, Gear, Tools, Weapons
-    """
+    lines.extend(
+        f"- [{page['title']}]({page['slug']})"
+        for page in sorted(
+            group["pages"],
+            key=lambda page: page["title"].lower(),
+        )
+    )
 
+    lines.extend(
+        [
+            "",
+            "</div>",
+            "",
+        ]
+    )
+
+    return lines
+
+
+def _render_data(page_groups: list[dict]) -> list[str]:
+    """Render generator groups in a CSS grid."""
+    lines = [
+        '<div class="data-groups">',
+        "",
+    ]
+
+    for group in page_groups:
+        lines.extend(_render_group(group))
+
+    lines.extend(
+        [
+            "</div>",
+            "",
+        ]
+    )
+
+    return lines
+
+
+def write_index_page(
+    output: Path,
+    page_groups: list[dict],
+    logo: Path,
+) -> None:
+    """Write the root documentation index."""
     output.parent.mkdir(parents=True, exist_ok=True)
 
     logo_path = copy_icon(
@@ -38,21 +83,10 @@ def write_index_page(output: Path, categories: list[dict], logo: Path) -> None:
         "[![GitHub](https://img.shields.io/badge/Source%20Code-GitHub-181717?logo=github)]"
         "(https://github.com/r0ute/bw-data)",
         "",
-        "## Equipment",
-        "",
+        *_render_data(page_groups),
     ]
 
-    for category in sorted(
-        categories,
-        key=lambda item: item["title"].lower(),
-    ):
-        title = category["title"]
-        slug = category["slug"]
-
-        # Equipment itself belongs to index.md, not equipment.md.
-        if title.strip().lower() == "equipment":
-            continue
-
-        lines.append(f"- [{title}]({slug})")
-
-    output.write_text("\n".join(lines), encoding="utf-8")
+    output.write_text(
+        "\n".join(lines),
+        encoding="utf-8",
+    )

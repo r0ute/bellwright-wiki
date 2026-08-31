@@ -92,3 +92,19 @@
     transform: rotate(0deg);
   }
 }
+
+/** data groups **/
+.data-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 2rem;
+  align-items: start;
+}
+
+.data-groups h2 {
+  margin-top: 0;
+}
+
+.data-groups ul {
+  margin-top: 0.5rem;
+}

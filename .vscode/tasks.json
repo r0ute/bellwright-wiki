@@ -10,7 +10,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "Get-ChildItem -Path .\\docs -File -Filter *.md | Remove-Item -Force; if (Test-Path .\\docs\\assets) { Get-ChildItem -Path .\\docs\\assets -Exclude *.js,*.css | Remove-Item -Recurse -Force }"
+        "Get-ChildItem -Path .\\docs -Recurse -File -Filter *.md | Remove-Item -Force; if (Test-Path .\\docs\\assets) { Get-ChildItem -Path .\\docs\\assets -Exclude *.js,*.css | Remove-Item -Recurse -Force }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -18,7 +18,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Generate docs",
+      "label": "Generate docs", 
       "type": "shell",
       "command": "python",
       "args": [
