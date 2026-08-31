@@ -28,14 +28,14 @@ def load_objects(path: Path) -> list[dict]:
 def load_schema(slug: str, fallback: bool = True):
     try:
         return importlib.import_module(f"generator.equipment.schema.{slug}")
-    except ImportError:
+    except ModuleNotFoundError as exc:
+        if exc.name != f"generator.equipment.schema.{slug}":
+            raise
+
         if not fallback:
             return None
 
-        try:
-            return importlib.import_module("generator.equipment.schema.default")
-        except ImportError:
-            return None
+        return importlib.import_module("generator.equipment.schema.default")
 
 
 def render_items(

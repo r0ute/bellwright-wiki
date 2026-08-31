@@ -1,65 +1,41 @@
 from pathlib import Path
 
 ICON_EXTENSIONS = {".webp"}
+ICON_PATH_KEYS = ("ObjectPath", "AssetPathName", "ObjectName")
 
 
 def build_icon_index(assets_root: Path) -> dict[str, Path]:
     """
-    Build an index:
+    Build a lowercase filename-stem index of extracted icons.
 
-        icon filename stem -> actual icon path
-
-    Example:
-        T_ItemTypeArrows.webp
-        -> "t_itemtypearrows": Path(...)
+    The first icon found for a duplicate stem is retained.
     """
     index: dict[str, Path] = {}
 
     for path in assets_root.rglob("*"):
-        if not path.is_file():
-            continue
-
-        if path.suffix.lower() not in ICON_EXTENSIONS:
-            continue
-
-        index.setdefault(path.stem.lower(), path)
+        if path.is_file() and path.suffix.lower() in ICON_EXTENSIONS:
+            index.setdefault(path.stem.lower(), path)
 
     return index
 
 
 def asset_path_stem(asset_path_name: str) -> str:
     """
-    Convert an Unreal/FModel AssetPathName/ObjectPath into
-    the extracted filename stem.
+    Extract an extracted filename stem from an Unreal/FModel asset reference.
 
-    Examples:
-
-        /Game/Mist/UI/Icons_new/ResourcesType/T_ItemTypeArrows.0
-        -> T_ItemTypeArrows
-
-        /Game/Mist/UI/Icons_new/ResourcesType/T_ItemTypeArrows
-        -> T_ItemTypeArrows
-
-        Texture2D'T_ItemTypeArrows'
-        -> T_ItemTypeArrows
+    Handles asset paths, optional object instance suffixes, and Unreal
+    object wrappers such as Texture2D'Foo'.
     """
     if not isinstance(asset_path_name, str) or not asset_path_name:
         return ""
 
     value = asset_path_name.strip()
 
-    # Remove Unreal object wrapper:
-    # Texture2D'Foo' -> Foo
     if "'" in value:
-        match = value.rsplit("'", 2)
-        if len(match) == 3 and match[1]:
-            value = match[1]
+        parts = value.rsplit("'", 2)
+        value = parts[1] if len(parts) == 3 and parts[1] else value
 
-    # Remove export/object instance suffix:
-    # Foo.0 -> Foo
-    value = value.split(".")[0]
-
-    return Path(value).name
+    return Path(value.split(".")[0]).name
 
 
 def find_icon(
@@ -67,46 +43,31 @@ def find_icon(
     icon_index: dict[str, Path],
 ) -> Path | None:
     """
-    Resolve Properties.Icon to an extracted .webp icon.
+    Resolve Properties.Icon to an extracted icon.
 
-    FModel may expose the reference using either:
-        ObjectPath
-        AssetPathName
-        ObjectName
+    ObjectPath, AssetPathName, and ObjectName are checked in that order.
     """
     icon = properties.get("Icon")
-
     if not isinstance(icon, dict):
         return None
 
-    # Prefer the actual Unreal asset path.
-    for key in ("ObjectPath", "AssetPathName", "ObjectName"):
+    for key in ICON_PATH_KEYS:
         value = icon.get(key)
 
         if not isinstance(value, str) or not value:
             continue
 
-        stem = asset_path_stem(value)
-
-        if not stem:
-            continue
-
-        result = icon_index.get(stem.lower())
-
-        if result:
+        if result := icon_index.get(asset_path_stem(value).lower()):
             return result
 
     return None
 
 
-def copy_icon(
-    icon: Path,
-    output_dir: Path,
-) -> Path:
+def copy_icon(icon: Path, output_dir: Path) -> Path:
     """
-    Copy an icon into the generated documentation assets.
+    Copy an icon to the generated documentation assets.
 
-    Returns the destination path.
+    Existing files are replaced only when their size differs.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
