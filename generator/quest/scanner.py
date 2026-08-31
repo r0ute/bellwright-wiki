@@ -1,7 +1,6 @@
 """Discover root quests and resolve their ordered subquests."""
 
 import json
-import re
 from pathlib import Path
 
 from ..discover import discover_json
@@ -41,7 +40,10 @@ def _usable_object_name(value: str) -> str:
     if not value or value.startswith("Default__"):
         return ""
 
-    return re.sub(r"_C$", "", value).strip()
+    if value.endswith("_C"):
+        value = value[:-2]
+
+    return value.strip()
 
 
 def _properties(obj: dict) -> dict:
@@ -49,7 +51,9 @@ def _properties(obj: dict) -> dict:
     return value if isinstance(value, dict) else {}
 
 
-def _quest_object(objects: list[dict]) -> dict | None:
+def _quest_object(
+    objects: list[dict],
+) -> dict | None:
     for obj in objects:
         if isinstance(
             obj.get("Properties"),
@@ -92,13 +96,17 @@ def _summary(obj: dict) -> str:
 def _description(obj: dict) -> str:
     properties = _properties(obj)
 
-    # Task-specific descriptions are the actual objective text
-    # used by the different quest types.
     for key, value in properties.items():
-        if key.endswith("TaskDescription") and _text(value):
-            return _text(value)
+        if key.casefold().endswith("taskdescription"):
+            text = _text(value)
+            if text:
+                return text
 
-    return _text(properties.get("Description"))
+    text = _text(properties.get("Description"))
+    if text:
+        return text
+
+    return ""
 
 
 def _class_name(value) -> str:
@@ -110,32 +118,30 @@ def _class_name(value) -> str:
     if not isinstance(object_name, str):
         return ""
 
-    match = re.search(
-        r"BlueprintGeneratedClass'([^']+)'",
-        object_name,
-    )
+    start = object_name.find("'")
+    end = object_name.rfind("'")
 
-    if not match:
+    if start == -1 or end <= start:
         return ""
 
-    return _usable_object_name(match.group(1))
+    return _usable_object_name(object_name[start + 1 : end])
 
 
-def _subquest_names(
+def _subquests(
     obj: dict,
 ) -> list[tuple[str, bool]]:
-    subquests = _properties(obj).get("Subquests")
+    values = _properties(obj).get("Subquests")
 
-    if not isinstance(subquests, list):
+    if not isinstance(values, list):
         return []
 
     result = []
 
-    for subquest in subquests:
-        if not isinstance(subquest, dict):
+    for value in values:
+        if not isinstance(value, dict):
             continue
 
-        name = _class_name(subquest.get("QuestClass"))
+        name = _class_name(value.get("QuestClass"))
 
         if not name:
             continue
@@ -144,7 +150,7 @@ def _subquest_names(
             (
                 name,
                 bool(
-                    subquest.get(
+                    value.get(
                         "bGroupNext",
                         False,
                     )
@@ -155,55 +161,96 @@ def _subquest_names(
     return result
 
 
+def _common_prefix(
+    names: list[str],
+) -> str:
+    if not names:
+        return ""
+
+    prefix = names[0]
+
+    for name in names[1:]:
+        length = 0
+
+        for left, right in zip(
+            prefix,
+            name,
+        ):
+            if left != right:
+                break
+
+            length += 1
+
+        prefix = prefix[:length]
+
+        if not prefix:
+            break
+
+    return prefix
+
+
+def _split_words(value: str) -> list[str]:
+    words = []
+    word = ""
+
+    for index, char in enumerate(value):
+        previous = value[index - 1] if index else ""
+        following = value[index + 1] if index + 1 < len(value) else ""
+
+        boundary = (
+            char == "_"
+            or (word and char.isupper() and previous.islower())
+            or (word and char.isupper() and previous.isupper() and following.islower())
+        )
+
+        if boundary:
+            if word:
+                words.append(word)
+                word = ""
+
+            if char == "_":
+                continue
+
+        word += char
+
+    if word:
+        words.append(word)
+
+    return words
+
+
 def _fallback_step_title(
-    quest_name: str,
+    prefix: str,
     step_name: str,
 ) -> str:
-    name = step_name
+    name = step_name[len(prefix) :].lstrip("_")
 
-    prefix = f"{quest_name}_"
+    return " ".join(_split_words(name)).strip()
 
-    if name.startswith(prefix):
-        name = name[len(prefix) :]
-    elif name.startswith(quest_name):
-        name = name[len(quest_name) :]
 
-    name = name.lstrip("_")
+def _step_title(
+    quest_title: str,
+    prefix: str,
+    step_name: str,
+    step_object: dict,
+) -> str:
+    title = _title(step_object)
 
-    # Implementation suffix used by some generated assets.
-    name = re.sub(
-        r"CS$",
-        "",
-        name,
+    if title and title.casefold() != quest_title.casefold():
+        return title
+
+    return _fallback_step_title(
+        prefix,
+        step_name,
     )
 
-    name = name.replace("_", " ")
 
-    name = re.sub(
-        r"(?<=[a-z0-9])(?=[A-Z])",
-        " ",
-        name,
-    )
-
-    name = re.sub(
-        r"(?<=[A-Z])(?=[A-Z][a-z])",
-        " ",
-        name,
-    )
-
-    return re.sub(
-        r"\s+",
-        " ",
-        name,
-    ).strip()
-
-
-def _resolve_step_files(
+def _resolve_steps(
     directory: Path,
-    quest_name: str,
+    quest_title: str,
     subquests: list[tuple[str, bool]],
 ) -> tuple[QuestStep, ...]:
-    files: dict[str, Path] = {}
+    files = {}
 
     for path in directory.glob("*.json"):
         objects = _load_objects(path)
@@ -212,34 +259,38 @@ def _resolve_step_files(
             name = _usable_object_name(_object_name(obj))
 
             if name:
-                files[name] = path
+                files[name] = (
+                    path,
+                    objects,
+                )
                 break
+
+    step_names = [name for name, _ in subquests]
+
+    prefix = _common_prefix(step_names)
 
     steps = []
 
     for name, group_next in subquests:
-        source = files.get(name)
+        entry = files.get(name)
 
-        if source is None:
+        if entry is None:
             continue
 
-        objects = _load_objects(source)
+        source, objects = entry
         step_object = _quest_object(objects)
 
         if step_object is None:
             continue
 
-        title = _title(step_object)
-
-        if not title:
-            title = _fallback_step_title(
-                quest_name,
-                name,
-            )
-
         steps.append(
             QuestStep(
-                name=title,
+                name=_step_title(
+                    quest_title,
+                    prefix,
+                    name,
+                    step_object,
+                ),
                 source=source,
                 summary=_description(step_object),
                 group_next=group_next,
@@ -253,7 +304,13 @@ def _category(
     relative: Path,
     categories: dict[str, str],
 ) -> tuple[str, str] | None:
-    configured = {name.casefold(): (name, slug) for name, slug in categories.items()}
+    configured = {
+        name.casefold(): (
+            name,
+            slug,
+        )
+        for name, slug in categories.items()
+    }
 
     for part in relative.parts:
         result = configured.get(part.casefold())
@@ -268,7 +325,7 @@ def _relative_tree_path(
     relative: Path,
     category: str,
 ) -> tuple[str, ...]:
-    parts = list(relative.parts)
+    parts = relative.parts
 
     category_index = next(
         index
@@ -277,20 +334,6 @@ def _relative_tree_path(
     )
 
     return tuple(parts[category_index + 1 : -1])
-
-
-def _is_root_quest(
-    objects: list[dict],
-) -> bool:
-    obj = _quest_object(objects)
-
-    if obj is None:
-        return False
-
-    return isinstance(
-        _properties(obj).get("Subquests"),
-        list,
-    )
 
 
 def discover_quests(
@@ -314,13 +357,14 @@ def discover_quests(
             continue
 
         objects = _load_objects(path)
-
-        if not _is_root_quest(objects):
-            continue
-
         quest_object = _quest_object(objects)
 
         if quest_object is None:
+            continue
+
+        subquests = _properties(quest_object).get("Subquests")
+
+        if not isinstance(subquests, list):
             continue
 
         category_name, _ = category
@@ -330,13 +374,7 @@ def discover_quests(
         if not name:
             name = path.stem
 
-        subquests = _subquest_names(quest_object)
-
-        steps = _resolve_step_files(
-            path.parent,
-            name,
-            subquests,
-        )
+        title = _title(quest_object) or name
 
         result[category_name].append(
             Quest(
@@ -347,9 +385,13 @@ def discover_quests(
                     relative,
                     category_name,
                 ),
-                title=(_title(quest_object) or name),
+                title=title,
                 summary=_summary(quest_object),
-                steps=steps,
+                steps=_resolve_steps(
+                    path.parent,
+                    title,
+                    _subquests(quest_object),
+                ),
             )
         )
 
