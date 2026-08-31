@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from .markdown import write_category
+from .markdown import write_category, write_root
 from .scanner import discover_quests
 from .tree import build_tree
 
@@ -35,6 +35,7 @@ def generate(
     )
 
     pages = []
+    categories = []
 
     for category in QUEST_CATEGORIES:
         slug = category.lower()
@@ -51,14 +52,29 @@ def generate(
             tree,
         )
 
-        print(f"\tGENERATED quest/{slug}/index.md ({len(quests)} quests)")
+        print(f"\tGENERATED quest/{slug}.md ({len(quests)} quests)")
+
+        categories.append(
+            (
+                category,
+                slug,
+            )
+        )
 
         pages.append(
             {
                 "title": category,
-                "slug": f"quest/{slug}/",
+                "slug": f"quest/{slug}.md",
             }
         )
+
+    write_root(
+        quest_docs,
+        sorted(
+            categories,
+            key=lambda item: item[0].casefold(),
+        ),
+    )
 
     return {
         "title": TITLE,

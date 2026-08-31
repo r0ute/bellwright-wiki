@@ -172,17 +172,17 @@ def _write_quest_page(
     )
 
 
-def _write_index(
+def _write_page(
     path: Path,
     title: str,
-    index_lines: list[str],
+    lines: list[str],
 ) -> None:
     path.parent.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    lines = [
+    content = [
         "---",
         "layout: default",
         f"title: {title}",
@@ -190,14 +190,12 @@ def _write_index(
         "",
         f"# {title}",
         "",
+        *lines,
+        "",
     ]
 
-    lines.extend(index_lines)
-
-    lines.append("")
-
     path.write_text(
-        "\n".join(lines),
+        "\n".join(content),
         encoding="utf-8",
     )
 
@@ -206,16 +204,38 @@ def _write_directory(
     node: QuestNode,
     directory: Path,
 ) -> None:
+    """Write a tree node using slugged Markdown filenames."""
+
+    page = directory.with_suffix(".md")
+
+    if node.quest is not None:
+        _write_quest_page(
+            page,
+            node.quest,
+        )
+    else:
+        lines: list[str] = []
+
+        for key, child in sorted(
+            node.children.items(),
+            key=lambda item: item[1].name.casefold(),
+        ):
+            if child.quest is not None:
+                lines.append(f"- [{child.name}]({directory.name}/{key}.md)")
+
+        _write_page(
+            page,
+            node.name,
+            lines,
+        )
+
+    if not node.children:
+        return
+
     directory.mkdir(
         parents=True,
         exist_ok=True,
     )
-
-    if node.quest is not None:
-        _write_quest_page(
-            directory / "index.md",
-            node.quest,
-        )
 
     for key, child in sorted(
         node.children.items(),
@@ -240,9 +260,10 @@ def _write_tree(
         padding = "  " * indent
 
         if child.quest is not None:
-            lines.append(f"{padding}- [{child.name}]({prefix}{key}/)")
+            lines.append(f"{padding}- [{child.name}]({prefix}{key}.md)")
         else:
             lines.append(f"{padding}- {child.name}")
+
             _write_tree(
                 lines,
                 child,
@@ -259,10 +280,6 @@ def write_category(
     """Write a quest category."""
 
     directory = docs / category_slug
-    directory.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
 
     _write_directory(
         tree,
@@ -274,10 +291,26 @@ def write_category(
     _write_tree(
         index_lines,
         tree,
+        f"{category_slug}/",
     )
 
-    _write_index(
-        directory / "index.md",
+    _write_page(
+        docs / f"{category_slug}.md",
         tree.name,
         index_lines,
+    )
+
+
+def write_root(
+    docs: Path,
+    categories: list[tuple[str, str]],
+) -> None:
+    """Write the root quest page."""
+
+    lines = [f"- [{title}]({slug}.md)" for title, slug in categories]
+
+    _write_page(
+        docs / "quest.md",
+        "Quests",
+        lines,
     )
