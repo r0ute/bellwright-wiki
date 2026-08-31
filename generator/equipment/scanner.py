@@ -416,16 +416,3 @@ def category_row_scope(
         )
 
     return scope
-
-
-def load_objects(path: Path) -> list[dict]:
-    """Load a FModel JSON file as a list of objects."""
-    raw = json.loads(path.read_text(encoding="utf-8"))
-
-    if isinstance(raw, list):
-        return [obj for obj in raw if isinstance(obj, dict)]
-
-    if isinstance(raw, dict):
-        return [raw]
-
-    return []
