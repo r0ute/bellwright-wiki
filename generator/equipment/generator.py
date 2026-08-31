@@ -25,38 +25,27 @@ def discover_items(
     assets: Path,
     category_index: dict[str, str],
 ) -> list[dict]:
-    """Discover equipment items and retain raw properties."""
+    """Discover equipment items with raw Properties."""
     items = []
 
-    for path in scanner.discover_json(assets):
-        if not category.is_equipment_item_path(path):
-            continue
-
+    for path in scanner.discover_items(assets):
         try:
-            objects = scanner.load_objects(path)
-            cdo = scanner.find_cdo(objects)
+            properties = scanner.load_properties(path)
 
-            if not cdo:
+            if not properties:
                 continue
-
-            properties = cdo.get("Properties")
-
-            if not isinstance(properties, dict):
-                continue
-
-            category_name = (
-                category.category_name_for(
-                    properties,
-                    category_index,
-                )
-                or "Uncategorized"
-            )
 
             items.append(
                 {
                     "path": path,
                     "properties": properties,
-                    "category": category_name,
+                    "category": (
+                        category.category_name_for(
+                            properties,
+                            category_index,
+                        )
+                        or "Uncategorized"
+                    ),
                 }
             )
         except Exception as exc:
@@ -65,69 +54,87 @@ def discover_items(
     return items
 
 
+def _item_context(
+    item: dict,
+    icon_index: dict[str, Path],
+    icon_out: Path,
+) -> dict:
+    """Build values supplied to schemas outside Properties."""
+    context = {
+        "path": item["path"],
+        "icon": "",
+    }
+
+    icon_path = icon.find_icon(
+        item["properties"],
+        icon_index,
+    )
+
+    if icon_path:
+        destination = icon.copy_icon(
+            icon_path,
+            icon_out,
+        )
+        context["icon"] = (
+            f'<img src="assets/icons/{destination.name}" '
+            f'alt="{item["path"].stem}" width="48">'
+        )
+
+    return context
+
+
 def render_items(
     items: list[dict],
     schema,
     icon_index: dict[str, Path],
     icon_out: Path,
 ) -> tuple[list[str], list[dict]]:
-    """Extract and sort equipment rows using a schema."""
+    """Extract and sort rows using a schema."""
     headers = list(schema.EQUIPMENT_FIELDS)
     rows = []
 
     for item in items:
-        properties = item["properties"]
-        path = item["path"]
-
-        icon_path = icon.find_icon(
-            properties,
+        context = _item_context(
+            item,
             icon_index,
+            icon_out,
         )
 
-        icon_md = ""
-
-        if icon_path:
-            destination = icon.copy_icon(
-                icon_path,
-                icon_out,
-            )
-
-            icon_md = (
-                f'<img src="assets/icons/{destination.name}" '
-                f'alt="{path.stem}" width="48">'
-            )
-
-        context = {
-            "icon": icon_md,
-            "path": path,
-        }
-
-        row = {
-            field: extractor(properties, context)
-            for field, extractor in schema.EQUIPMENT_FIELDS.items()
-        }
-
-        rows.append(row)
+        rows.append(
+            {
+                field: extractor(
+                    item["properties"],
+                    context,
+                )
+                for field, extractor in schema.EQUIPMENT_FIELDS.items()
+            }
+        )
 
     rows.sort(key=lambda row: str(row.get("Name", "")).lower())
 
     return headers, rows
 
 
-def resolve_schema(
+def _schema_for(
     slug: str,
     fallback_slug: str | None = None,
 ):
-    """Resolve child, group, then default schema."""
+    """Resolve a schema with an optional parent fallback."""
     schema = load_schema(slug, fallback=False)
 
-    if schema is None and fallback_slug:
+    if schema is not None:
+        return schema
+
+    if fallback_slug:
         schema = load_schema(
             fallback_slug,
             fallback=False,
         )
 
-    return schema or load_schema("default")
+        if schema is not None:
+            return schema
+
+    return load_schema("default")
 
 
 def build_sections(
@@ -154,20 +161,18 @@ def build_sections(
     ]
 
     child_keys = sorted(
-        category_children.get(group_key, set()),
+        category_children.get(group_key, ()),
         key=lambda key: category_titles[key].lower(),
     )
 
     if not child_keys:
-        schema = load_schema(group_slug)
-
         return {
             group_title: render_items(
                 group_items,
-                schema,
+                _schema_for(group_slug),
                 icon_index,
                 icon_out,
-            ),
+            )
         }
 
     sections = {}
@@ -188,14 +193,12 @@ def build_sections(
             if category.normalize_category_key(item["category"]) in child_scope
         ]
 
-        schema = resolve_schema(
-            child_slug,
-            fallback_slug=group_slug,
-        )
-
         sections[child_title] = render_items(
             child_items,
-            schema,
+            _schema_for(
+                child_slug,
+                fallback_slug=group_slug,
+            ),
             icon_index,
             icon_out,
         )
@@ -210,9 +213,9 @@ def generate(
     icon_index: dict[str, Path],
 ) -> list[dict]:
     """Generate equipment documentation."""
-    category_index = scanner.build_category_index(assets)
+    category_index = category.build_category_index(assets)
 
-    category_children, category_titles = scanner.build_category_hierarchy(assets)
+    category_children, category_titles = category.build_category_hierarchy(assets)
 
     print(f"Equipment categories indexed: {len(category_titles)}")
 
@@ -224,7 +227,7 @@ def generate(
     pages = []
 
     group_keys = sorted(
-        category_children.get("equipment", set()),
+        category_children.get("equipment", ()),
         key=lambda key: category_titles[key].lower(),
     )
 

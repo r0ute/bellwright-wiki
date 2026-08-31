@@ -3,13 +3,9 @@ from pathlib import Path
 from generator.icon import copy_icon
 
 
-def write_index_page(output: Path, categories: list[dict], logo: Path) -> None:
+def write_index_page(output: Path, equipment_pages: list[dict], logo: Path) -> None:
     """
     Write the root documentation index.
-
-    Equipment is represented by index.md and is never emitted as
-    equipment.md. The supplied categories are the child groups:
-        Ammo, Armors, Clothing, Gear, Tools, Weapons
     """
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -43,16 +39,11 @@ def write_index_page(output: Path, categories: list[dict], logo: Path) -> None:
     ]
 
     for category in sorted(
-        categories,
+        equipment_pages,
         key=lambda item: item["title"].lower(),
     ):
         title = category["title"]
         slug = category["slug"]
-
-        # Equipment itself belongs to index.md, not equipment.md.
-        if title.strip().lower() == "equipment":
-            continue
-
         lines.append(f"- [{title}]({slug})")
 
     output.write_text("\n".join(lines), encoding="utf-8")

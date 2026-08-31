@@ -27,7 +27,7 @@ def main() -> None:
 
     icon_index = icon.build_icon_index(ASSETS)
 
-    category_pages = equipment_generator.generate(
+    equipment_pages = equipment_generator.generate(
         ASSETS,
         DOCS,
         ICON_OUT,
@@ -36,7 +36,7 @@ def main() -> None:
 
     renderer.write_index_page(
         DOCS / "index.md",
-        category_pages,
+        equipment_pages,
         ASSETS / "T_Logo.webp",
     )
 
