@@ -4,9 +4,11 @@ from generator.icon import copy_icon
 
 
 def _render_group(group: dict) -> list[str]:
-    """Render one generator group as Markdown."""
+    """Render one generator group."""
     lines = [
-        f"### {group['title']}",
+        '<div class="data-group" markdown="1">',
+        "",
+        f"## {group['title']}",
         "",
     ]
 
@@ -18,17 +20,21 @@ def _render_group(group: dict) -> list[str]:
         )
     )
 
-    lines.append("")
+    lines.extend(
+        [
+            "",
+            "</div>",
+            "",
+        ]
+    )
 
     return lines
 
 
 def _render_data(page_groups: list[dict]) -> list[str]:
-    """Render generator groups as a CSS grid."""
+    """Render generator groups in a CSS grid."""
     lines = [
-        "## Data",
-        "",
-        '<div class="data-groups" markdown="1">',
+        '<div class="data-groups">',
         "",
     ]
 
