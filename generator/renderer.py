@@ -3,7 +3,63 @@ from pathlib import Path
 from generator.icon import copy_icon
 
 
-def _index_lines(equipment_pages: list[dict], logo_src: str) -> list[str]:
+def _render_group(group: dict) -> list[str]:
+    """Render one generator group as Markdown."""
+    lines = [
+        f"### {group['title']}",
+        "",
+    ]
+
+    lines.extend(
+        f"- [{page['title']}]({page['slug']})"
+        for page in sorted(
+            group["pages"],
+            key=lambda page: page["title"].lower(),
+        )
+    )
+
+    lines.append("")
+
+    return lines
+
+
+def _render_data(page_groups: list[dict]) -> list[str]:
+    """Render generator groups as a CSS grid."""
+    lines = [
+        "## Data",
+        "",
+        '<div class="data-groups" markdown="1">',
+        "",
+    ]
+
+    for group in page_groups:
+        lines.extend(_render_group(group))
+
+    lines.extend(
+        [
+            "</div>",
+            "",
+        ]
+    )
+
+    return lines
+
+
+def write_index_page(
+    output: Path,
+    page_groups: list[dict],
+    logo: Path,
+) -> None:
+    """Write the root documentation index."""
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    logo_path = copy_icon(
+        logo,
+        output.parent / "assets",
+    )
+
+    logo_src = logo_path.relative_to(output.parent).as_posix()
+
     lines = [
         "---",
         "layout: default",
@@ -21,42 +77,10 @@ def _index_lines(equipment_pages: list[dict], logo_src: str) -> list[str]:
         "[![GitHub](https://img.shields.io/badge/Source%20Code-GitHub-181717?logo=github)]"
         "(https://github.com/r0ute/bw-data)",
         "",
-        "## Equipment",
-        "",
+        *_render_data(page_groups),
     ]
 
-    lines.extend(
-        f"- [{page['title']}]({page['slug']})"
-        for page in sorted(
-            equipment_pages,
-            key=lambda page: page["title"].lower(),
-        )
-    )
-
-    return lines
-
-
-def write_index_page(
-    output: Path,
-    equipment_pages: list[dict],
-    logo: Path,
-) -> None:
-    """Write the root documentation index."""
-    output.parent.mkdir(parents=True, exist_ok=True)
-
-    logo_path = copy_icon(
-        logo,
-        output.parent / "assets",
-    )
-
-    logo_src = logo_path.relative_to(output.parent).as_posix()
-
     output.write_text(
-        "\n".join(
-            _index_lines(
-                equipment_pages,
-                logo_src,
-            )
-        ),
+        "\n".join(lines),
         encoding="utf-8",
     )

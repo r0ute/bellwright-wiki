@@ -2,6 +2,7 @@ from pathlib import Path
 
 from . import icon, renderer
 from .equipment import generator as equipment_generator
+from .quest import generator as quest_generator
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
@@ -27,16 +28,24 @@ def main() -> None:
 
     icon_index = icon.build_icon_index(ASSETS)
 
-    equipment_pages = equipment_generator.generate(
-        ASSETS,
-        DOCS,
-        ICON_OUT,
-        icon_index,
+    generators = (
+        equipment_generator.generate,
+        quest_generator.generate,
     )
+
+    page_groups = [
+        generator(
+            ASSETS,
+            DOCS,
+            ICON_OUT,
+            icon_index,
+        )
+        for generator in generators
+    ]
 
     renderer.write_index_page(
         DOCS / "index.md",
-        equipment_pages,
+        page_groups,
         ASSETS / "T_Logo.webp",
     )
 

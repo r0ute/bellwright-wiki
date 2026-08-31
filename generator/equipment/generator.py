@@ -4,6 +4,8 @@ from pathlib import Path
 from .. import icon
 from . import category, markdown, scanner
 
+TITLE = "Equipment"
+
 
 def load_schema(slug: str, fallback: bool = True):
     """Load an equipment schema by slug."""
@@ -211,7 +213,7 @@ def generate(
     docs: Path,
     icon_out: Path,
     icon_index: dict[str, Path],
-) -> list[dict]:
+) -> dict:
     """Generate equipment documentation."""
     category_index = category.build_category_index(assets)
 
@@ -264,4 +266,7 @@ def generate(
 
         print(f"\tGENERATED {slug}.md ({total} items)")
 
-    return pages
+    return {
+        "title": TITLE,
+        "pages": pages,
+    }
