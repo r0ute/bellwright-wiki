@@ -41,32 +41,23 @@ def _usable_object_name(value: str) -> str:
     if not value or value.startswith("Default__"):
         return ""
 
-    value = re.sub(r"_C$", "", value)
-
-    return value.strip()
-
-
-def _is_quest_object(obj: dict) -> bool:
-    value = obj.get("Type")
-
-    if not isinstance(value, str):
-        return False
-
-    return "quest" in value.casefold()
-
-
-def _quest_object(objects: list[dict]) -> dict | None:
-    for obj in objects:
-        if _is_quest_object(obj):
-            return obj
-
-    return None
+    return re.sub(r"_C$", "", value).strip()
 
 
 def _properties(obj: dict) -> dict:
     value = obj.get("Properties")
-
     return value if isinstance(value, dict) else {}
+
+
+def _quest_object(objects: list[dict]) -> dict | None:
+    for obj in objects:
+        if isinstance(
+            obj.get("Properties"),
+            dict,
+        ):
+            return obj
+
+    return None
 
 
 def _text(value) -> str:
@@ -75,16 +66,17 @@ def _text(value) -> str:
 
     if isinstance(value, dict):
         for key in (
-            "SourceString",
             "LocalizedString",
+            "SourceString",
+            "CultureInvariantString",
             "StringTableEntry",
             "Value",
             "Text",
         ):
-            result = _text(value.get(key))
+            result = value.get(key)
 
-            if result:
-                return result
+            if isinstance(result, str) and result.strip():
+                return result.strip()
 
     return ""
 
@@ -95,6 +87,18 @@ def _title(obj: dict) -> str:
 
 def _summary(obj: dict) -> str:
     return _text(_properties(obj).get("Summary"))
+
+
+def _description(obj: dict) -> str:
+    properties = _properties(obj)
+
+    # Task-specific descriptions are the actual objective text
+    # used by the different quest types.
+    for key, value in properties.items():
+        if key.endswith("TaskDescription") and _text(value):
+            return _text(value)
+
+    return _text(properties.get("Description"))
 
 
 def _class_name(value) -> str:
@@ -151,8 +155,52 @@ def _subquest_names(
     return result
 
 
+def _fallback_step_title(
+    quest_name: str,
+    step_name: str,
+) -> str:
+    name = step_name
+
+    prefix = f"{quest_name}_"
+
+    if name.startswith(prefix):
+        name = name[len(prefix) :]
+    elif name.startswith(quest_name):
+        name = name[len(quest_name) :]
+
+    name = name.lstrip("_")
+
+    # Implementation suffix used by some generated assets.
+    name = re.sub(
+        r"CS$",
+        "",
+        name,
+    )
+
+    name = name.replace("_", " ")
+
+    name = re.sub(
+        r"(?<=[a-z0-9])(?=[A-Z])",
+        " ",
+        name,
+    )
+
+    name = re.sub(
+        r"(?<=[A-Z])(?=[A-Z][a-z])",
+        " ",
+        name,
+    )
+
+    return re.sub(
+        r"\s+",
+        " ",
+        name,
+    ).strip()
+
+
 def _resolve_step_files(
     directory: Path,
+    quest_name: str,
     subquests: list[tuple[str, bool]],
 ) -> tuple[QuestStep, ...]:
     files: dict[str, Path] = {}
@@ -176,24 +224,24 @@ def _resolve_step_files(
             continue
 
         objects = _load_objects(source)
+        step_object = _quest_object(objects)
 
-        quest_object = None
-
-        for obj in objects:
-            object_name = _usable_object_name(_object_name(obj))
-
-            if object_name == name:
-                quest_object = obj
-                break
-
-        if quest_object is None:
+        if step_object is None:
             continue
+
+        title = _title(step_object)
+
+        if not title:
+            title = _fallback_step_title(
+                quest_name,
+                name,
+            )
 
         steps.append(
             QuestStep(
-                name=name,
+                name=title,
                 source=source,
-                summary=_summary(quest_object),
+                summary=_description(step_object),
                 group_next=group_next,
             )
         )
@@ -286,6 +334,7 @@ def discover_quests(
 
         steps = _resolve_step_files(
             path.parent,
+            name,
             subquests,
         )
 
@@ -298,7 +347,7 @@ def discover_quests(
                     relative,
                     category_name,
                 ),
-                title=_title(quest_object) or name,
+                title=(_title(quest_object) or name),
                 summary=_summary(quest_object),
                 steps=steps,
             )
