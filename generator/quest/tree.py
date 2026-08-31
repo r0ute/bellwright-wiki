@@ -2,7 +2,7 @@
 
 import re
 
-from .models import Quest, QuestNode
+from .model import Quest, QuestNode
 
 
 def slugify(value: str) -> str:

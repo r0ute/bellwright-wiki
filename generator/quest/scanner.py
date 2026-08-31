@@ -5,8 +5,7 @@ import re
 from pathlib import Path
 
 from ..discover import discover_json
-from .constants import QUEST_CATEGORIES
-from .models import Quest
+from .model import Quest
 
 
 def _load_objects(path: Path) -> list[dict]:
@@ -97,10 +96,8 @@ def _quest_name(path: Path, objects: list[dict]) -> str:
     return path.stem
 
 
-def _category(relative: Path) -> tuple[str, str] | None:
-    configured = {
-        name.casefold(): (name, slug) for name, slug in QUEST_CATEGORIES.items()
-    }
+def _category(relative: Path, categories: list[str]) -> tuple[str, str] | None:
+    configured = {name.casefold(): (name, slug) for name, slug in categories.items()}
 
     for part in relative.parts:
         result = configured.get(part.casefold())
@@ -123,9 +120,9 @@ def _relative_tree_path(relative: Path, category: str) -> tuple[str, ...]:
     return tuple(parts[category_index + 1 : -1])
 
 
-def discover_quests(assets: Path) -> dict[str, list[Quest]]:
+def discover_quests(assets: Path, categories: list[str]) -> dict[str, list[Quest]]:
     """Discover quests only inside configured quest categories."""
-    result = {category: [] for category in QUEST_CATEGORIES}
+    result = {category: [] for category in categories}
 
     for path in discover_json(assets):
         try:
@@ -133,7 +130,7 @@ def discover_quests(assets: Path) -> dict[str, list[Quest]]:
         except ValueError:
             continue
 
-        category = _category(relative)
+        category = _category(relative, categories)
         if category is None:
             continue
 

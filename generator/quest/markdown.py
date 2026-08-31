@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from .models import QuestNode
+from .model import QuestNode
 
 
 def _write_quest_page(path: Path, quest_name: str) -> None:
