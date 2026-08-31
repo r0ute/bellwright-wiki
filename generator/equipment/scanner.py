@@ -3,7 +3,6 @@ import re
 from pathlib import Path
 
 from generator.discover import discover_json
-
 from generator.equipment.category import is_equipment_category_path
 from generator.icon import copy_icon, find_icon
 
@@ -417,3 +416,16 @@ def category_row_scope(
         )
 
     return scope
+
+
+def load_objects(path: Path) -> list[dict]:
+    """Load a FModel JSON file as a list of objects."""
+    raw = json.loads(path.read_text(encoding="utf-8"))
+
+    if isinstance(raw, list):
+        return [obj for obj in raw if isinstance(obj, dict)]
+
+    if isinstance(raw, dict):
+        return [raw]
+
+    return []

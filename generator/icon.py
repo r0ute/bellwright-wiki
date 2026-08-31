@@ -16,6 +16,8 @@ def build_icon_index(assets_root: Path) -> dict[str, Path]:
         if path.is_file() and path.suffix.lower() in ICON_EXTENSIONS:
             index.setdefault(path.stem.lower(), path)
 
+    print(f"Icons indexed: {len(index)}")
+
     return index
 
 
