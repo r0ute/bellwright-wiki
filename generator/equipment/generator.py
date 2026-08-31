@@ -34,7 +34,7 @@ def discover_items(
         try:
             properties = scanner.load_properties(path)
 
-            if not properties:
+            if not properties or not is_player_item(properties):
                 continue
 
             items.append(
@@ -54,6 +54,24 @@ def discover_items(
             print(f"SKIP {path}: {exc}")
 
     return items
+
+
+def is_player_item(properties: dict) -> bool:
+    """Return True when the item has a non-system player acquisition recipe."""
+    recipes = properties.get("InstancedRecipes")
+
+    if not isinstance(recipes, list):
+        return False
+
+    for recipe in recipes:
+        if not isinstance(recipe, dict):
+            continue
+        if recipe.get("bIsSystemRecipe", False):
+            continue
+        if recipe.get("RequiredUnlockable"):
+            return True
+
+    return False
 
 
 def _item_context(
