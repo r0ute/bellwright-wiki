@@ -1,16 +1,16 @@
 from pathlib import Path
 
-from generator import icon, renderer
-from generator.equipment import generator as equipment_generator
+from . import icon, renderer
+from .equipment import generator as equipment_generator
 
 ROOT = Path(__file__).resolve().parent.parent
-ASSETS = ROOT / "assets"
 DOCS = ROOT / "docs"
+ASSETS = ROOT / "assets"
 ICON_OUT = DOCS / "assets" / "icons"
 
 
 def clean_output() -> None:
-    """Remove previously generated documentation and icons."""
+    """Remove generated documentation and icons."""
     DOCS.mkdir(parents=True, exist_ok=True)
 
     for path in DOCS.glob("*.md"):

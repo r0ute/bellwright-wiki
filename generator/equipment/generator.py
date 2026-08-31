@@ -1,7 +1,8 @@
 import importlib
 from pathlib import Path
 
-from generator.equipment import category, markdown, scanner
+from .. import icon
+from . import category, markdown, scanner
 
 
 def load_schema(slug: str, fallback: bool = True):
@@ -20,34 +21,11 @@ def load_schema(slug: str, fallback: bool = True):
         return importlib.import_module("generator.equipment.schema.default")
 
 
-def render_items(items: list[dict], schema) -> tuple[list[str], list[dict]]:
-    """Render equipment items using a schema."""
-    headers = list(schema.EQUIPMENT_FIELDS)
-    rows = []
-
-    for item in items:
-        properties = item["properties"]
-        context = item["context"]
-
-        rows.append(
-            {
-                field: extractor(properties, context)
-                for field, extractor in schema.EQUIPMENT_FIELDS.items()
-            }
-        )
-
-    rows.sort(key=lambda row: str(row.get("Name", "")).lower())
-
-    return headers, rows
-
-
 def discover_items(
     assets: Path,
-    icon_index: dict[str, Path],
     category_index: dict[str, str],
-    icon_out: Path,
 ) -> list[dict]:
-    """Discover and extract equipment items."""
+    """Discover equipment items and retain raw properties."""
     items = []
 
     for path in scanner.discover_json(assets):
@@ -56,22 +34,100 @@ def discover_items(
 
         try:
             objects = scanner.load_objects(path)
-            if not scanner.find_cdo(objects):
+            cdo = scanner.find_cdo(objects)
+
+            if not cdo:
                 continue
 
-            items.append(
-                scanner.generate_equipment_item(
-                    path,
-                    objects,
-                    icon_index,
+            properties = cdo.get("Properties")
+
+            if not isinstance(properties, dict):
+                continue
+
+            category_name = (
+                category.category_name_for(
+                    properties,
                     category_index,
-                    icon_out,
                 )
+                or "Uncategorized"
+            )
+
+            items.append(
+                {
+                    "path": path,
+                    "properties": properties,
+                    "category": category_name,
+                }
             )
         except Exception as exc:
             print(f"SKIP {path}: {exc}")
 
     return items
+
+
+def render_items(
+    items: list[dict],
+    schema,
+    icon_index: dict[str, Path],
+    icon_out: Path,
+) -> tuple[list[str], list[dict]]:
+    """Extract and sort equipment rows using a schema."""
+    headers = list(schema.EQUIPMENT_FIELDS)
+    rows = []
+
+    for item in items:
+        properties = item["properties"]
+        path = item["path"]
+
+        icon_path = icon.find_icon(
+            properties,
+            icon_index,
+        )
+
+        icon_md = ""
+
+        if icon_path:
+            destination = icon.copy_icon(
+                icon_path,
+                icon_out,
+            )
+
+            icon_md = (
+                f'<img src="assets/icons/{destination.name}" '
+                f'alt="{path.stem}" width="48">'
+            )
+
+        context = {
+            "icon": icon_md,
+            "path": path,
+        }
+
+        row = {
+            field: extractor(properties, context)
+            for field, extractor in schema.EQUIPMENT_FIELDS.items()
+        }
+
+        rows.append(row)
+
+    rows.sort(key=lambda row: str(row.get("Name", "")).lower())
+
+    return headers, rows
+
+
+def resolve_schema(
+    slug: str,
+    fallback_slug: str | None = None,
+):
+    """Resolve child, group, then default schema."""
+    schema = load_schema(slug, fallback=False)
+
+    if schema is None and fallback_slug:
+        schema = load_schema(
+            fallback_slug,
+            fallback=False,
+        )
+
+    return schema or load_schema("default")
 
 
 def build_sections(
@@ -81,9 +137,11 @@ def build_sections(
     items: list[dict],
     category_children: dict[str, set[str]],
     category_titles: dict[str, str],
+    icon_index: dict[str, Path],
+    icon_out: Path,
 ) -> dict[str, tuple[list[str], list[dict]]]:
     """Build Markdown sections for an equipment group."""
-    scope = scanner.category_row_scope(
+    scope = category.category_row_scope(
         group_title,
         category_children,
         category_titles,
@@ -92,7 +150,7 @@ def build_sections(
     group_items = [
         item
         for item in items
-        if scanner.normalize_category_key(item["Category"]) in scope
+        if category.normalize_category_key(item["category"]) in scope
     ]
 
     child_keys = sorted(
@@ -104,16 +162,21 @@ def build_sections(
         schema = load_schema(group_slug)
 
         return {
-            group_title: render_items(group_items, schema),
+            group_title: render_items(
+                group_items,
+                schema,
+                icon_index,
+                icon_out,
+            ),
         }
 
     sections = {}
 
     for child_key in child_keys:
         child_title = category_titles[child_key]
-        child_slug = scanner.category_slug(child_title)
+        child_slug = category.category_slug(child_title)
 
-        child_scope = scanner.category_row_scope(
+        child_scope = category.category_row_scope(
             child_title,
             category_children,
             category_titles,
@@ -122,18 +185,20 @@ def build_sections(
         child_items = [
             item
             for item in group_items
-            if scanner.normalize_category_key(item["Category"]) in child_scope
+            if category.normalize_category_key(item["category"]) in child_scope
         ]
 
-        schema = load_schema(child_slug, fallback=False)
+        schema = resolve_schema(
+            child_slug,
+            fallback_slug=group_slug,
+        )
 
-        if schema is None:
-            schema = load_schema(group_slug, fallback=False)
-
-        if schema is None:
-            schema = load_schema("default")
-
-        sections[child_title] = render_items(child_items, schema)
+        sections[child_title] = render_items(
+            child_items,
+            schema,
+            icon_index,
+            icon_out,
+        )
 
     return sections
 
@@ -144,7 +209,7 @@ def generate(
     icon_out: Path,
     icon_index: dict[str, Path],
 ) -> list[dict]:
-    """Generate equipment documentation and return its index entries."""
+    """Generate equipment documentation."""
     category_index = scanner.build_category_index(assets)
 
     category_children, category_titles = scanner.build_category_hierarchy(assets)
@@ -153,9 +218,7 @@ def generate(
 
     items = discover_items(
         assets,
-        icon_index,
         category_index,
-        icon_out,
     )
 
     pages = []
@@ -167,7 +230,7 @@ def generate(
 
     for group_key in group_keys:
         title = category_titles[group_key]
-        slug = scanner.category_slug(title)
+        slug = category.category_slug(title)
 
         sections = build_sections(
             group_key,
@@ -176,6 +239,8 @@ def generate(
             items,
             category_children,
             category_titles,
+            icon_index,
+            icon_out,
         )
 
         total = sum(len(rows) for _, rows in sections.values())

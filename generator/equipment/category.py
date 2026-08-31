@@ -25,6 +25,7 @@ def _superstruct_object_name(obj: dict) -> str | None:
         return None
 
     super_struct = obj.get("SuperStruct")
+
     if not isinstance(super_struct, dict):
         return None
 
@@ -35,10 +36,7 @@ def _superstruct_object_name(obj: dict) -> str | None:
 
     match = re.search(r"'([^']+)'", value)
 
-    if match:
-        return match.group(1)
-
-    return value
+    return match.group(1) if match else value
 
 
 def _property_name(obj: dict) -> str | None:
@@ -55,16 +53,10 @@ def _property_name(obj: dict) -> str | None:
     else:
         value = name
 
-    if isinstance(value, str) and value.strip():
-        return value.strip()
-
-    return None
+    return value.strip() if isinstance(value, str) and value.strip() else None
 
 
 def _is_mist_category_class(object_name: str | None) -> bool:
-    if not object_name:
-        return False
-
     return object_name in {
         "MistItemCategory",
         "MistItemCategory_C",
@@ -77,26 +69,21 @@ def is_equipment_category_path(path: Path) -> bool:
     """
     Return True for actual Equipment category metadata JSON.
 
-    Category identity comes from the Unreal JSON metadata, not the
-    filename. This means ClothingCategoryGroup.json correctly
-    represents the category named "Clothing".
+    Category identity comes from Unreal metadata rather than the filename.
     """
     lower_parts = [part.lower() for part in path.parts]
 
-    if not (
-        "items" in lower_parts
-        and "categories" in lower_parts
-        and "equipment" in lower_parts
-    ):
+    if not {
+        "items",
+        "categories",
+        "equipment",
+    }.issubset(lower_parts):
         return False
 
-    for obj in _load_json_objects(path):
-        object_name = _superstruct_object_name(obj)
-
-        if _is_mist_category_class(object_name):
-            return True
-
-    return False
+    return any(
+        _is_mist_category_class(_superstruct_object_name(obj))
+        for obj in _load_json_objects(path)
+    )
 
 
 def is_equipment_item_path(path: Path) -> bool:
@@ -111,20 +98,7 @@ def is_equipment_item_path(path: Path) -> bool:
 
 
 def category_name_for_path(path: Path) -> str | None:
-    """
-    Return the canonical category name from Properties.Name.
-
-    Examples:
-
-        Equipment.json
-            -> Equipment
-
-        Ammo.json
-            -> Ammo
-
-        ClothingCategoryGroup.json
-            -> Clothing
-    """
+    """Return the canonical category name from Properties.Name."""
     if not is_equipment_category_path(path):
         return None
 
@@ -149,39 +123,69 @@ def category_from_path(path: Path) -> str | None:
 
 
 def is_equipment_category_group(path: Path) -> bool:
-    """
-    Return True when the JSON represents a MistItemCategoryGroup.
-
-    Note:
-        ClothingCategoryGroup.json returns True here, but its canonical
-        category name is still "Clothing", not "ClothingCategoryGroup".
-    """
+    """Return True when the JSON represents a MistItemCategoryGroup."""
     if not is_equipment_category_path(path):
         return False
 
-    for obj in _load_json_objects(path):
-        object_name = _superstruct_object_name(obj)
-
-        if object_name in {
+    return any(
+        _superstruct_object_name(obj)
+        in {
             "MistItemCategoryGroup",
             "MistItemCategoryGroup_C",
-        }:
-            return True
+        }
+        for obj in _load_json_objects(path)
+    )
 
-    return False
+
+def category_key_from_ref(value: object) -> str | None:
+    """Extract an Unreal asset/class name from an object reference."""
+    if not isinstance(value, dict):
+        return None
+
+    for key in ("ObjectPath", "AssetPathName", "ObjectName"):
+        ref = value.get(key)
+
+        if not isinstance(ref, str) or not ref:
+            continue
+
+        if ref.startswith("/Game/"):
+            return ref.split("/")[-1].split(".")[0]
+
+        match = re.search(r"'([^']+)'", ref)
+
+        if match:
+            return match.group(1)
+
+    return None
+
+
+def category_name_for(
+    properties: dict,
+    category_index: dict[str, str],
+) -> str | None:
+    """Resolve an item's Category reference to its display name."""
+    key = category_key_from_ref(properties.get("Category"))
+
+    if not key:
+        return None
+
+    normalized = normalize_category_key(key)
+
+    if title := category_index.get(normalized):
+        return title
+
+    for candidate_key, candidate_title in sorted(
+        category_index.items(),
+        key=lambda item: -len(item[0]),
+    ):
+        if normalized.startswith(candidate_key):
+            return candidate_title
+
+    return None
 
 
 def category_parent_key(path: Path) -> str | None:
-    """
-    Return the normalized key of Properties.Parent.
-
-    Example:
-
-        ClothingCategoryGroup.json
-            Parent.ObjectName = BlueprintGeneratedClass'Equipment_C'
-
-        -> "equipment"
-    """
+    """Return the normalized key of Properties.Parent."""
     if not is_equipment_category_path(path):
         return None
 
@@ -196,42 +200,14 @@ def category_parent_key(path: Path) -> str | None:
         if not isinstance(parent, dict):
             continue
 
-        for field in (
-            "ObjectPath",
-            "AssetPathName",
-            "ObjectName",
-        ):
-            value = parent.get(field)
-
-            if not isinstance(value, str) or not value:
-                continue
-
-            # /Game/.../Equipment.0
-            if value.startswith("/Game/"):
-                value = value.split("/")[-1]
-                value = value.split(".")[0]
-
-            # BlueprintGeneratedClass'Equipment_C'
-            match = re.search(r"'([^']+)'", value)
-
-            if match:
-                value = match.group(1)
-
-            return normalize_category_key(value)
+        if key := category_key_from_ref(parent):
+            return normalize_category_key(key)
 
     return None
 
 
 def normalize_category_key(value: str) -> str:
-    """
-    Normalize Unreal category identifiers.
-
-    Examples:
-
-        Equipment_C             -> equipment
-        ClothingCategoryGroup_C -> clothingcategorygroup
-        Equipment               -> equipment
-    """
+    """Normalize an Unreal category identifier."""
     cleaned = value.strip()
 
     if cleaned.endswith("_C"):
@@ -241,14 +217,47 @@ def normalize_category_key(value: str) -> str:
 
 
 def category_key_for_path(path: Path) -> str | None:
-    """
-    Return the canonical category key based on Properties.Name.
-
-    This is intentionally NOT based on path.stem.
-    """
+    """Return the canonical category key from Properties.Name."""
     name = category_name_for_path(path)
 
-    if not name:
-        return None
+    return normalize_category_key(name) if name else None
 
-    return normalize_category_key(name)
+
+def category_slug(value: str) -> str:
+    """Convert a category display name to a Markdown filename slug."""
+    slug = re.sub(
+        r"[^a-z0-9]+",
+        "-",
+        value.lower(),
+    ).strip("-")
+
+    return slug or "category"
+
+
+def category_row_scope(
+    title: str,
+    descendants: dict[str, set[str]],
+    titles: dict[str, str],
+) -> set[str]:
+    """Return the category plus all descendants."""
+    start = normalize_category_key(title)
+
+    scope: set[str] = set()
+    stack = [start]
+
+    while stack:
+        current = stack.pop()
+
+        if current in scope:
+            continue
+
+        scope.add(current)
+        stack.extend(
+            sorted(
+                descendants.get(current, set()),
+                key=str.lower,
+                reverse=True,
+            )
+        )
+
+    return scope
