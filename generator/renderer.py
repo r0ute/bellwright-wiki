@@ -4,6 +4,7 @@ from generator.icon import copy_icon
 
 
 def _render_group(group: dict) -> list[str]:
+    """Render one generator group."""
     lines = [
         '<div class="data-group" markdown="1">',
         "",
@@ -11,7 +12,13 @@ def _render_group(group: dict) -> list[str]:
         "",
     ]
 
-    lines.extend(f"- [{page['title']}]({page['slug']})" for page in group["pages"])
+    lines.extend(
+        f"- [{page['title']}]({page['slug']})"
+        for page in sorted(
+            group["pages"],
+            key=lambda page: page["title"].lower(),
+        )
+    )
 
     lines.extend(
         [
@@ -25,10 +32,21 @@ def _render_group(group: dict) -> list[str]:
 
 
 def _render_data(page_groups: list[dict]) -> list[str]:
-    lines = []
+    """Render generator groups in a CSS grid."""
+    lines = [
+        '<div class="data-groups">',
+        "",
+    ]
 
     for group in page_groups:
         lines.extend(_render_group(group))
+
+    lines.extend(
+        [
+            "</div>",
+            "",
+        ]
+    )
 
     return lines
 
@@ -54,23 +72,16 @@ def write_index_page(
         "title: Bellwright Data",
         "---",
         "",
-        (
-            f'<p align="center" class="logo"><img src="{logo_src}" '
-            'alt="Bellwright" width="96"></p>'
-        ),
+        f'<p align="center" class="logo"><img src="{logo_src}" alt="Bellwright"',
+        'width="96"></p>',
         "",
         "# Bellwright Data",
         "",
-        (
-            "A searchable reference of **Bellwright** game data, "
-            "organized for easy browsing."
-        ),
+        "A searchable reference of **Bellwright** game data, "
+        "organized for easy browsing.",
         "",
-        (
-            "[![GitHub](https://img.shields.io/badge/"
-            "Source%20Code-GitHub-181717?logo=github)]"
-            "(https://github.com/r0ute/bw-data)"
-        ),
+        "[![GitHub](https://img.shields.io/badge/Source%20Code-GitHub-181717?logo=github)]"
+        "(https://github.com/r0ute/bw-data)",
         "",
         *_render_data(page_groups),
     ]
