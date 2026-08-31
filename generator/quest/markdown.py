@@ -31,18 +31,28 @@ def _write_parallel_steps(
     number: int,
     steps: list[QuestStep],
 ) -> None:
-    lines.append("{:.quest-parallel}")
-    lines.append("")
+    lines.extend(
+        [
+            "{:.quest-parallel}",
+            "",
+        ]
+    )
 
-    for offset, step in enumerate(steps):
+    for offset, step in enumerate(steps, start=1):
         lines.extend(
             [
-                f"- **{number + offset}. {step.name}**",
+                f"- ### {number}.{offset}. {step.name}",
+                "",
             ]
         )
 
         if step.summary:
-            lines.append(f"  {step.summary}")
+            lines.extend(
+                [
+                    f"  {step.summary}",
+                    "",
+                ]
+            )
 
     lines.append("")
 
@@ -68,35 +78,22 @@ def _write_steps(
             continue
 
         group = [step]
-        group_type = step.type
 
-        while index + 1 < len(steps):
-            next_step = steps[index + 1]
-
-            if not step.group_next:
-                break
-
-            if next_step.type != group_type:
-                break
-
+        while (
+            index + 1 < len(steps)
+            and steps[index].group_next
+            and steps[index + 1].type == step.type
+        ):
             index += 1
-            step = next_step
-            group.append(step)
+            group.append(steps[index])
 
-        if len(group) == 1:
-            _write_step(
-                lines,
-                number,
-                group[0],
-            )
-        else:
-            _write_parallel_steps(
-                lines,
-                number,
-                group,
-            )
+        _write_parallel_steps(
+            lines,
+            number,
+            group,
+        )
 
-        number += len(group)
+        number += 1
         index += 1
 
 

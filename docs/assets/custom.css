@@ -114,8 +114,17 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
+  padding: 0;
+  margin: 1rem 0;
+  list-style: none;
 }
 
-.quest-parallel > li {
+.quest-parallel li {
+  list-style: none;
+  padding: 0;
   margin: 0;
+}
+
+.quest-parallel li::marker {
+  content: "";
 }
