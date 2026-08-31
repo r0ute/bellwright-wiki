@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from ..discover import discover_json
-from .model import Quest, QuestStep
+from .model import Quest, QuestItem, QuestStep
 
 
 def _load_objects(path: Path) -> list[dict]:
@@ -127,6 +127,59 @@ def _class_name(value) -> str:
         return ""
 
     return _usable_object_name(object_name[start + 1 : end])
+
+
+def _integer(value, default: int = 0) -> int:
+    if isinstance(value, bool):
+        return default
+
+    if isinstance(value, int):
+        return value
+
+    if isinstance(value, float):
+        return int(value)
+
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return default
+
+    return default
+
+
+def _items(obj: dict) -> tuple[QuestItem, ...]:
+    values = _properties(obj).get("Items")
+
+    if not isinstance(values, list):
+        return ()
+
+    result = []
+
+    for value in values:
+        if not isinstance(value, dict):
+            continue
+
+        item_name = _class_name(value.get("ItemClass"))
+
+        if not item_name:
+            continue
+
+        min_amount = _integer(value.get("MinAmount"))
+        max_amount = _integer(
+            value.get("MaxAmount"),
+            min_amount,
+        )
+
+        result.append(
+            QuestItem(
+                name=item_name,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+
+    return tuple(result)
 
 
 def _subquests(
@@ -279,6 +332,7 @@ def _resolve_steps(
                 summary=_description(step_object),
                 type=quest_type,
                 group_next=group_next,
+                items=_items(step_object),
             )
         )
 

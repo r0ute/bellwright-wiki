@@ -2,7 +2,42 @@
 
 from pathlib import Path
 
-from .model import Quest, QuestNode, QuestStep
+from .model import Quest, QuestItem, QuestNode, QuestStep
+
+
+def _format_items(items: tuple[QuestItem, ...]) -> str:
+    values = []
+
+    for item in items:
+        if item.min_amount == item.max_amount:
+            amount = str(item.min_amount)
+        else:
+            amount = f"{item.min_amount}-{item.max_amount}"
+
+        values.append(f"{item.name} x {amount}")
+
+    return ", ".join(values)
+
+
+def _write_step_content(
+    lines: list[str],
+    step: QuestStep,
+) -> None:
+    if step.summary:
+        lines.extend(
+            [
+                step.summary,
+                "",
+            ]
+        )
+
+    if step.items:
+        lines.extend(
+            [
+                f"**Items to bring:** {_format_items(step.items)}",
+                "",
+            ]
+        )
 
 
 def _write_step(
@@ -17,13 +52,7 @@ def _write_step(
         ]
     )
 
-    if step.summary:
-        lines.extend(
-            [
-                step.summary,
-                "",
-            ]
-        )
+    _write_step_content(lines, step)
 
 
 def _write_parallel_steps(
