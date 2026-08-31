@@ -1,6 +1,8 @@
 /docs/assets/*
 !/docs/assets/*.css
 !/docs/assets/*.js
+
 /docs/*.md
+/docs/**/*.md
 
 __pycache__
