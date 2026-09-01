@@ -96,10 +96,14 @@
 /** homepage link **/
 .markdown-body > h1:first-child a {
   display: inline-block;
+  width: 48px;
   height: 48px;
   font-size: 0;
-  background: url("logo.png") center / contain no-repeat;
-  background-repeat: no-repeat;
+  background: url("T_Logo.webp") center / contain no-repeat;
+}
+
+.markdown-body h1:first-child:has(> a) {
+  border-bottom: none !important;
 }
 
 /** data groups **/
