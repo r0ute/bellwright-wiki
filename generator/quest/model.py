@@ -29,6 +29,7 @@ class QuestStep:
     group_next: bool = False
     type: str = ""
     items: tuple[QuestItem, ...] = field(default_factory=tuple)
+    npc: str = ""
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,8 @@ class Quest:
     relative_path: tuple[str, ...]
     title: str
     summary: str = ""
+    giver: str = ""
+    npcs: tuple[str, ...] = field(default_factory=tuple)
     steps: tuple[QuestStep, ...] = field(default_factory=tuple)
     rewards: tuple[QuestReward, ...] = field(default_factory=tuple)
     money_reward: int = 0

@@ -58,6 +58,29 @@ def _format_rewards(
     return guaranteed, random
 
 
+def _write_giver_npcs(
+    lines: list[str],
+    quest: Quest,
+) -> None:
+    if not quest.giver and not quest.npcs:
+        return
+
+    lines.extend(
+        [
+            "## Giver / NPCs",
+            "",
+        ]
+    )
+
+    if quest.giver:
+        lines.append(f"- **Giver:** {quest.giver}")
+
+    if quest.npcs:
+        lines.append(f"- **NPCs:** {', '.join(quest.npcs)}")
+
+    lines.append("")
+
+
 def _write_rewards(
     lines: list[str],
     quest: Quest,
@@ -118,10 +141,13 @@ def _write_step_row(
     step: QuestStep,
 ) -> None:
     summary = step.summary or ""
+    npc = step.npc or ""
     items = _format_items(step.items) if step.items else ""
     completion = step.completion_text or ""
 
-    lines.append(f"| {number} | {step.name} | {summary} | {items} | {completion} |")
+    lines.append(
+        f"| {number} | {step.name} | {npc} | {summary} | {items} | {completion} |"
+    )
 
 
 def _write_steps(
@@ -130,8 +156,8 @@ def _write_steps(
 ) -> None:
     lines.extend(
         [
-            "| # | Step | Summary | Items to bring | Completion |",
-            "|---|---|---|---|---|",
+            "| # | Step | NPC | Summary | Items to bring | Completion |",
+            "|---|---|---|---|---|---|",
         ]
     )
 
@@ -147,6 +173,7 @@ def _write_steps(
                 str(number),
                 step,
             )
+
             number += 1
             index += 1
             continue
@@ -161,7 +188,10 @@ def _write_steps(
             index += 1
             group.append(steps[index])
 
-        for offset, parallel_step in enumerate(group, start=1):
+        for offset, parallel_step in enumerate(
+            group,
+            start=1,
+        ):
             _write_step_row(
                 lines,
                 f"{number}.{offset}",
@@ -200,6 +230,11 @@ def _write_quest_page(
                 "",
             ]
         )
+
+    _write_giver_npcs(
+        lines,
+        quest,
+    )
 
     _write_rewards(
         lines,

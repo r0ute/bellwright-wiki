@@ -96,6 +96,18 @@ def _class_name(value) -> str:
     return _usable_object_name(object_name[start + 1 : end])
 
 
+def _npc_name(value) -> str:
+    if isinstance(value, dict) and "TalkClass" in value:
+        value = value.get("TalkClass")
+
+    name = _class_name(value)
+
+    if name.endswith("Talk"):
+        name = name[:-4]
+
+    return " ".join(_split_words(name)).strip()
+
+
 def _int(value, default: int = 0) -> int:
     if isinstance(value, bool):
         return int(value)
@@ -373,6 +385,32 @@ def _step_title(
     )
 
 
+def _step_npc(step_object: dict) -> str:
+    npc = _npc_name(_property(step_object, "NpcRef"))
+
+    if npc:
+        return npc
+
+    return _npc_name(_property(step_object, "DefaultQuestGiverRef"))
+
+
+def _required_npcs(obj: dict) -> tuple[str, ...]:
+    values = _property(obj, "RequiredNpcsForQuestToBeVisible")
+
+    if not isinstance(values, list):
+        return ()
+
+    result = []
+
+    for value in values:
+        npc = _npc_name(value)
+
+        if npc and npc not in result:
+            result.append(npc)
+
+    return tuple(result)
+
+
 def _resolve_steps(
     quest_name: str,
     quest_title: str,
@@ -410,10 +448,33 @@ def _resolve_steps(
                 type=quest_type,
                 group_next=group_next,
                 items=_items(step_object),
+                npc=_step_npc(step_object),
             )
         )
 
     return tuple(steps)
+
+
+def _quest_npcs(
+    quest_object: dict,
+    steps: tuple[QuestStep, ...],
+    giver: str,
+) -> tuple[str, ...]:
+    result = []
+
+    for npc in _required_npcs(quest_object):
+        if npc and npc.casefold() != giver.casefold():
+            if npc not in result:
+                result.append(npc)
+
+    for step in steps:
+        npc = step.npc
+
+        if npc and npc.casefold() != giver.casefold():
+            if npc not in result:
+                result.append(npc)
+
+    return tuple(result)
 
 
 def parse_quest(
@@ -439,6 +500,15 @@ def parse_quest(
 
     title = _text_property(quest_object, "Title") or name
 
+    steps = _resolve_steps(
+        name,
+        title,
+        _subquests(quest_object),
+        directory_objects,
+    )
+
+    giver = _npc_name(_property(quest_object, "DefaultQuestGiverRef"))
+
     return Quest(
         name=name,
         category=category,
@@ -449,12 +519,13 @@ def parse_quest(
         ),
         title=title,
         summary=_text_property(quest_object, "Summary"),
-        steps=_resolve_steps(
-            name,
-            title,
-            _subquests(quest_object),
-            directory_objects,
+        giver=giver,
+        npcs=_quest_npcs(
+            quest_object,
+            steps,
+            giver,
         ),
+        steps=steps,
         rewards=_rewards(quest_object),
         money_reward=_int(_property(quest_object, "MoneyReward")),
         renown_reward=_int(_property(quest_object, "RenownReward")),
