@@ -119,8 +119,9 @@ def _write_step_row(
 ) -> None:
     summary = step.summary or ""
     items = _format_items(step.items) if step.items else ""
+    completion = step.completion_text or ""
 
-    lines.append(f"| {number} | {step.name} | {summary} | {items} |")
+    lines.append(f"| {number} | {step.name} | {summary} | {items} | {completion} |")
 
 
 def _write_steps(
@@ -129,8 +130,8 @@ def _write_steps(
 ) -> None:
     lines.extend(
         [
-            "| # | Step | Summary | Items to bring |",
-            "|---|---|---|---|",
+            "| # | Step | Summary | Items to bring | Completion |",
+            "|---|---|---|---|---|",
         ]
     )
 

@@ -403,6 +403,10 @@ def _resolve_steps(
                 ),
                 source=source,
                 summary=_description(step_object),
+                completion_text=_text_property(
+                    step_object,
+                    "CompletionText",
+                ),
                 type=quest_type,
                 group_next=group_next,
                 items=_items(step_object),
