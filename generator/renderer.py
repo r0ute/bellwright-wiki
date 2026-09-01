@@ -65,6 +65,11 @@ def write_index_page(
     )
 
     logo_src = logo_path.relative_to(output.parent).as_posix()
+    version = (
+        (output.parent.parent / "assets" / "version")
+        .read_text(encoding="utf-8")
+        .strip()
+    )
 
     lines = [
         "---",
@@ -80,7 +85,8 @@ def write_index_page(
         "A searchable reference of **Bellwright** game data, "
         "organized for easy browsing.",
         "",
-        "[![GitHub](https://img.shields.io/badge/Source%20Code-GitHub-181717?logo=github)]"
+        f"![Game Version](https://img.shields.io/badge/Game%20Version-{version}-black)",
+        "[![GitHub](https://img.shields.io/badge/Source%20Code-GitHub-black?logo=github)]"
         "(https://github.com/r0ute/bw-data)",
         "",
         *_render_data(page_groups),
