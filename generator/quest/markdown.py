@@ -16,7 +16,7 @@ def _format_items(items: tuple[QuestItem, ...]) -> str:
 
         values.append(f"{item.name} x {amount}")
 
-    return ", ".join(values)
+    return "<br>".join(values)
 
 
 def _format_reward(reward: QuestReward) -> str:
@@ -112,87 +112,28 @@ def _write_rewards(
         lines.append("")
 
 
-def _write_step_content(
+def _write_step_row(
     lines: list[str],
+    number: str,
     step: QuestStep,
 ) -> None:
-    if step.summary:
-        lines.extend(
-            [
-                step.summary,
-                "",
-            ]
-        )
+    summary = step.summary or ""
+    items = _format_items(step.items) if step.items else ""
 
-    if step.items:
-        lines.extend(
-            [
-                "### Items to bring",
-                "",
-            ]
-        )
-
-        for item in step.items:
-            if item.min_amount == item.max_amount:
-                amount = str(item.min_amount)
-            else:
-                amount = f"{item.min_amount}-{item.max_amount}"
-
-            lines.append(f"- {item.name} x {amount}")
-
-        lines.append("")
-
-
-def _write_step(
-    lines: list[str],
-    number: int,
-    step: QuestStep,
-) -> None:
-    lines.extend(
-        [
-            f"### {number}. {step.name}",
-            "",
-        ]
-    )
-
-    _write_step_content(lines, step)
-
-
-def _write_parallel_steps(
-    lines: list[str],
-    number: int,
-    steps: list[QuestStep],
-) -> None:
-    lines.extend(
-        [
-            "{:.quest-parallel}",
-            "",
-        ]
-    )
-
-    for offset, step in enumerate(steps, start=1):
-        lines.extend(
-            [
-                f"- ### {number}.{offset}. {step.name}",
-                "",
-            ]
-        )
-
-        if step.summary:
-            lines.extend(
-                [
-                    f"  {step.summary}",
-                    "",
-                ]
-            )
-
-    lines.append("")
+    lines.append(f"| {number} | {step.name} | {summary} | {items} |")
 
 
 def _write_steps(
     lines: list[str],
     steps: tuple[QuestStep, ...],
 ) -> None:
+    lines.extend(
+        [
+            "| # | Step | Summary | Items to bring |",
+            "|---|---|---|---|",
+        ]
+    )
+
     number = 1
     index = 0
 
@@ -200,9 +141,9 @@ def _write_steps(
         step = steps[index]
 
         if not step.group_next:
-            _write_step(
+            _write_step_row(
                 lines,
-                number,
+                str(number),
                 step,
             )
             number += 1
@@ -219,14 +160,17 @@ def _write_steps(
             index += 1
             group.append(steps[index])
 
-        _write_parallel_steps(
-            lines,
-            number,
-            group,
-        )
+        for offset, parallel_step in enumerate(group, start=1):
+            _write_step_row(
+                lines,
+                f"{number}.{offset}",
+                parallel_step,
+            )
 
         number += 1
         index += 1
+
+    lines.append("")
 
 
 def _write_quest_page(
