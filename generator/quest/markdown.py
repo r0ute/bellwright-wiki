@@ -244,6 +244,11 @@ def _write_quest_page(
             ]
         )
 
+    _write_rewards(
+        lines,
+        quest,
+    )
+
     if quest.steps:
         lines.extend(
             [
@@ -256,11 +261,6 @@ def _write_quest_page(
             lines,
             quest.steps,
         )
-
-    _write_rewards(
-        lines,
-        quest,
-    )
 
     path.write_text(
         "\n".join(lines),
