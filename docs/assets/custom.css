@@ -121,23 +121,3 @@
 .data-groups ul {
   margin-top: 0.5rem;
 }
-
-/**  parallel quest steps **/
-.quest-parallel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
-
-  margin-bottom: 0 !important;
-  padding-left: 0 !important;
-  list-style: none;
-}
-
-.quest-parallel > li {
-  display: block;
-  list-style: none;
-}
-
-.quest-parallel > li::marker {
-  content: "";
-}
