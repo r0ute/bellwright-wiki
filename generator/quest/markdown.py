@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from .model import Quest, QuestItem, QuestNode, QuestStep
+from .model import Quest, QuestItem, QuestNode, QuestReward, QuestStep
 
 
 def _format_items(items: tuple[QuestItem, ...]) -> str:
@@ -17,6 +17,48 @@ def _format_items(items: tuple[QuestItem, ...]) -> str:
         values.append(f"{item.name} x {amount}")
 
     return ", ".join(values)
+
+
+def _format_rewards(
+    rewards: tuple[QuestReward, ...],
+    renown_reward: int = 0,
+) -> str:
+    values = []
+
+    if renown_reward > 0:
+        values.append(f"Renown x {renown_reward}")
+
+    for reward in rewards:
+        if reward.min_amount == reward.max_amount:
+            amount = str(reward.min_amount)
+        else:
+            amount = f"{reward.min_amount}-{reward.max_amount}"
+
+        values.append(f"{reward.name} x {amount}")
+
+    return ", ".join(values)
+
+
+def _write_rewards(
+    lines: list[str],
+    quest: Quest,
+) -> None:
+    if not quest.rewards and quest.renown_reward <= 0:
+        return
+
+    lines.extend(
+        [
+            "## Rewards",
+            "",
+        ]
+    )
+
+    rewards = _format_rewards(quest.rewards, quest.renown_reward)
+
+    if rewards:
+        lines.append(rewards)
+
+    lines.append("")
 
 
 def _write_step_content(
@@ -66,7 +108,6 @@ def _write_parallel_steps(
             "",
         ]
     )
-
     for offset, step in enumerate(steps, start=1):
         lines.extend(
             [
@@ -92,7 +133,6 @@ def _write_steps(
 ) -> None:
     number = 1
     index = 0
-
     while index < len(steps):
         step = steps[index]
 
@@ -115,7 +155,6 @@ def _write_steps(
         ):
             index += 1
             group.append(steps[index])
-
         _write_parallel_steps(
             lines,
             number,
@@ -144,7 +183,6 @@ def _write_quest_page(
         f"# {quest.title}",
         "",
     ]
-
     if quest.summary:
         lines.extend(
             [
@@ -165,6 +203,8 @@ def _write_quest_page(
             lines,
             quest.steps,
         )
+
+    _write_rewards(lines, quest)
 
     path.write_text(
         "\n".join(lines),
@@ -215,7 +255,6 @@ def _write_directory(
         )
     else:
         lines: list[str] = []
-
         for key, child in sorted(
             node.children.items(),
             key=lambda item: item[1].name.casefold(),
@@ -236,7 +275,6 @@ def _write_directory(
         parents=True,
         exist_ok=True,
     )
-
     for key, child in sorted(
         node.children.items(),
         key=lambda item: item[1].name.casefold(),
@@ -258,7 +296,6 @@ def _write_tree(
         key=lambda item: item[1].name.casefold(),
     ):
         padding = "  " * indent
-
         if child.quest is not None:
             lines.append(f"{padding}- [{child.name}]({prefix}{key}.md)")
         else:
@@ -280,7 +317,6 @@ def write_category(
     """Write a quest category."""
 
     directory = docs / category_slug
-
     _write_directory(
         tree,
         directory,
@@ -308,7 +344,6 @@ def write_root(
     """Write the root quest page."""
 
     lines = [f"- [{title}]({slug}.md)" for title, slug in categories]
-
     _write_page(
         docs / "quest.md",
         "Quests",

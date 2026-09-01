@@ -12,6 +12,13 @@ class QuestItem:
 
 
 @dataclass(frozen=True)
+class QuestReward:
+    name: str
+    min_amount: int
+    max_amount: int
+
+
+@dataclass(frozen=True)
 class QuestStep:
     name: str
     source: Path
@@ -30,6 +37,8 @@ class Quest:
     title: str
     summary: str = ""
     steps: tuple[QuestStep, ...] = field(default_factory=tuple)
+    rewards: tuple[QuestReward, ...] = field(default_factory=tuple)
+    renown_reward: int = 0
 
 
 @dataclass

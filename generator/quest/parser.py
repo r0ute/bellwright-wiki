@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from .model import Quest, QuestStep
+from .model import Quest, QuestReward, QuestStep
 
 ObjectIndex = dict[str, tuple[Path, list[dict]]]
 
@@ -103,6 +103,59 @@ def _class_name(value) -> str:
     return _usable_object_name(object_name[start + 1 : end])
 
 
+def _int(value, default: int = 0) -> int:
+    if isinstance(value, bool):
+        return int(value)
+
+    if isinstance(value, int):
+        return value
+
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            pass
+
+    return default
+
+
+def _rewards(obj: dict) -> tuple[QuestReward, ...]:
+    item_reward = _properties(obj).get("ItemReward")
+
+    if not isinstance(item_reward, dict):
+        return ()
+
+    outputs = item_reward.get("Outputs")
+
+    if not isinstance(outputs, list):
+        return ()
+
+    rewards = []
+
+    for output in outputs:
+        if not isinstance(output, dict):
+            continue
+
+        name = _class_name(output.get("ItemClass"))
+
+        if not name:
+            continue
+
+        rewards.append(
+            QuestReward(
+                name=name,
+                min_amount=_int(output.get("MinQuantity")),
+                max_amount=_int(output.get("MaxQuantity")),
+            )
+        )
+
+    return tuple(rewards)
+
+
+def _renown_reward(obj: dict) -> int:
+    return _int(_properties(obj).get("RenownReward"))
+
+
 def _subquests(
     obj: dict,
 ) -> list[tuple[str, str, bool]]:
@@ -112,7 +165,6 @@ def _subquests(
         return []
 
     result = []
-
     for value in values:
         if not isinstance(value, dict):
             continue
@@ -259,7 +311,6 @@ def parse_quest(
         return None
 
     name = _usable_object_name(_object_name(quest_object))
-
     if not name:
         name = path.stem
 
@@ -281,6 +332,8 @@ def parse_quest(
             _subquests(quest_object),
             directory_objects,
         ),
+        rewards=_rewards(quest_object),
+        renown_reward=_renown_reward(quest_object),
     )
 
 
