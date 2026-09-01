@@ -244,28 +244,12 @@ def _write_directory(
     node: QuestNode,
     directory: Path,
 ) -> None:
-    """Write a tree node using slugged Markdown filenames."""
-
-    page = directory.with_suffix(".md")
+    """Write quest pages while using tree nodes as directories."""
 
     if node.quest is not None:
         _write_quest_page(
-            page,
+            directory.with_suffix(".md"),
             node.quest,
-        )
-    else:
-        lines: list[str] = []
-        for key, child in sorted(
-            node.children.items(),
-            key=lambda item: item[1].name.casefold(),
-        ):
-            if child.quest is not None:
-                lines.append(f"- [{child.name}]({directory.name}/{key}.md)")
-
-        _write_page(
-            page,
-            node.name,
-            lines,
         )
 
     if not node.children:
@@ -275,6 +259,7 @@ def _write_directory(
         parents=True,
         exist_ok=True,
     )
+
     for key, child in sorted(
         node.children.items(),
         key=lambda item: item[1].name.casefold(),
