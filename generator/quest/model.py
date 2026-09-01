@@ -14,8 +14,10 @@ class QuestItem:
 @dataclass(frozen=True)
 class QuestReward:
     name: str
-    min_amount: int
-    max_amount: int
+    min_amount: int | None
+    max_amount: int | None
+    chance: float | None = None
+    per_roll: bool = False
 
 
 @dataclass(frozen=True)

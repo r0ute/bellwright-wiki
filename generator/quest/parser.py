@@ -110,13 +110,111 @@ def _int(value, default: int = 0) -> int:
     if isinstance(value, int):
         return value
 
+    if isinstance(value, float):
+        return int(value)
+
     if isinstance(value, str):
         try:
-            return int(value)
+            return int(float(value))
         except ValueError:
             pass
 
     return default
+
+
+def _float(value, default: float = 0.0) -> float:
+    if isinstance(value, bool):
+        return float(value)
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            pass
+
+    return default
+
+
+def _reward_name(value) -> str:
+    name = _class_name(value)
+
+    if not name:
+        return ""
+
+    words = _split_words(name)
+
+    result = []
+    for word in words:
+        if word and word[-1].isdigit():
+            split_at = len(word)
+
+            while split_at > 0 and word[split_at - 1].isdigit():
+                split_at -= 1
+
+            if split_at > 0:
+                result.append(word[:split_at])
+                result.append(word[split_at:])
+                continue
+
+        result.append(word)
+
+    return " ".join(result)
+
+
+def _table_reward(
+    table: dict,
+) -> QuestReward | None:
+    table_ref = table.get("Table")
+    name = _reward_name(table_ref)
+
+    if not name:
+        return None
+
+    min_multiplier = table.get("MinQuantityMultiplier")
+    max_multiplier = table.get("MaxQuantityMultiplier")
+
+    if min_multiplier is None and max_multiplier is None:
+        min_amount = None
+        max_amount = None
+    else:
+        min_amount = _int(min_multiplier, 1)
+        max_amount = _int(
+            max_multiplier,
+            min_amount,
+        )
+
+    run_chance = _float(
+        table.get("RunChance"),
+        1.0,
+    )
+    per_iteration_chance = _float(
+        table.get("PerIterationRunChance"),
+        run_chance,
+    )
+
+    min_iterations = _int(
+        table.get("MinIterations"),
+        1,
+    )
+    max_iterations = _int(
+        table.get("MaxIterations"),
+        min_iterations,
+    )
+
+    per_roll = min_iterations != max_iterations
+
+    chance = per_iteration_chance if per_roll else run_chance
+
+    return QuestReward(
+        name=name,
+        min_amount=min_amount,
+        max_amount=max_amount,
+        chance=chance,
+        per_roll=per_roll,
+    )
 
 
 def _rewards(obj: dict) -> tuple[QuestReward, ...]:
@@ -125,29 +223,43 @@ def _rewards(obj: dict) -> tuple[QuestReward, ...]:
     if not isinstance(item_reward, dict):
         return ()
 
-    outputs = item_reward.get("Outputs")
-
-    if not isinstance(outputs, list):
-        return ()
-
     rewards = []
 
-    for output in outputs:
-        if not isinstance(output, dict):
-            continue
+    outputs = item_reward.get("Outputs")
 
-        name = _class_name(output.get("ItemClass"))
+    if isinstance(outputs, list):
+        for output in outputs:
+            if not isinstance(output, dict):
+                continue
 
-        if not name:
-            continue
+            name = _reward_name(output.get("ItemClass"))
 
-        rewards.append(
-            QuestReward(
-                name=name,
-                min_amount=_int(output.get("MinQuantity")),
-                max_amount=_int(output.get("MaxQuantity")),
+            if not name:
+                continue
+
+            rewards.append(
+                QuestReward(
+                    name=name,
+                    min_amount=_int(
+                        output.get("MinQuantity"),
+                    ),
+                    max_amount=_int(
+                        output.get("MaxQuantity"),
+                    ),
+                )
             )
-        )
+
+    tables = item_reward.get("Tables")
+
+    if isinstance(tables, list):
+        for table in tables:
+            if not isinstance(table, dict):
+                continue
+
+            reward = _table_reward(table)
+
+            if reward is not None:
+                rewards.append(reward)
 
     return tuple(rewards)
 
@@ -165,6 +277,7 @@ def _subquests(
         return []
 
     result = []
+
     for value in values:
         if not isinstance(value, dict):
             continue
@@ -311,6 +424,7 @@ def parse_quest(
         return None
 
     name = _usable_object_name(_object_name(quest_object))
+
     if not name:
         name = path.stem
 

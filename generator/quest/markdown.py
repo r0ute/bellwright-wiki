@@ -19,24 +19,43 @@ def _format_items(items: tuple[QuestItem, ...]) -> str:
     return ", ".join(values)
 
 
-def _format_rewards(
-    rewards: tuple[QuestReward, ...],
-    renown_reward: int = 0,
-) -> str:
-    values = []
+def _format_reward(reward: QuestReward) -> str:
+    value = reward.name
 
-    if renown_reward > 0:
-        values.append(f"Renown x {renown_reward}")
-
-    for reward in rewards:
+    if reward.min_amount is not None and reward.max_amount is not None:
         if reward.min_amount == reward.max_amount:
             amount = str(reward.min_amount)
         else:
             amount = f"{reward.min_amount}-{reward.max_amount}"
 
-        values.append(f"{reward.name} x {amount}")
+        value = f"{value} x {amount}"
 
-    return ", ".join(values)
+    if reward.chance is not None:
+        chance = f"{reward.chance:g}%"
+
+        if reward.per_roll:
+            chance += "/roll"
+
+        value = f"{value} ({chance})"
+
+    return value
+
+
+def _format_rewards(
+    rewards: tuple[QuestReward, ...],
+) -> tuple[list[str], list[str]]:
+    guaranteed = []
+    random = []
+
+    for reward in rewards:
+        value = _format_reward(reward)
+
+        if reward.chance is None:
+            guaranteed.append(value)
+        else:
+            random.append(value)
+
+    return guaranteed, random
 
 
 def _write_rewards(
@@ -53,12 +72,33 @@ def _write_rewards(
         ]
     )
 
-    rewards = _format_rewards(quest.rewards, quest.renown_reward)
+    if quest.renown_reward > 0:
+        lines.extend(
+            [
+                f"- Renown x {quest.renown_reward}",
+                "",
+            ]
+        )
 
-    if rewards:
-        lines.append(rewards)
+    guaranteed, random = _format_rewards(quest.rewards)
 
-    lines.append("")
+    if guaranteed:
+        lines.extend(
+            [
+                "### Guaranteed",
+                f"- {', '.join(guaranteed)}",
+                "",
+            ]
+        )
+
+    if random:
+        lines.extend(
+            [
+                "### Random",
+                f"- {', '.join(random)}",
+                "",
+            ]
+        )
 
 
 def _write_step_content(
@@ -108,6 +148,7 @@ def _write_parallel_steps(
             "",
         ]
     )
+
     for offset, step in enumerate(steps, start=1):
         lines.extend(
             [
@@ -133,6 +174,7 @@ def _write_steps(
 ) -> None:
     number = 1
     index = 0
+
     while index < len(steps):
         step = steps[index]
 
@@ -155,6 +197,7 @@ def _write_steps(
         ):
             index += 1
             group.append(steps[index])
+
         _write_parallel_steps(
             lines,
             number,
@@ -183,6 +226,7 @@ def _write_quest_page(
         f"# {quest.title}",
         "",
     ]
+
     if quest.summary:
         lines.extend(
             [
@@ -204,7 +248,10 @@ def _write_quest_page(
             quest.steps,
         )
 
-    _write_rewards(lines, quest)
+    _write_rewards(
+        lines,
+        quest,
+    )
 
     path.write_text(
         "\n".join(lines),
@@ -245,7 +292,6 @@ def _write_directory(
     directory: Path,
 ) -> None:
     """Write quest pages while using tree nodes as directories."""
-
     if node.quest is not None:
         _write_quest_page(
             directory.with_suffix(".md"),
@@ -281,6 +327,7 @@ def _write_tree(
         key=lambda item: item[1].name.casefold(),
     ):
         padding = "  " * indent
+
         if child.quest is not None:
             lines.append(f"{padding}- [{child.name}]({prefix}{key}.md)")
         else:
@@ -302,6 +349,7 @@ def write_category(
     """Write a quest category."""
 
     directory = docs / category_slug
+
     _write_directory(
         tree,
         directory,
@@ -329,6 +377,7 @@ def write_root(
     """Write the root quest page."""
 
     lines = [f"- [{title}]({slug}.md)" for title, slug in categories]
+
     _write_page(
         docs / "quest.md",
         "Quests",
