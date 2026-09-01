@@ -85,7 +85,7 @@ def write_index_page(
         "A searchable reference of **Bellwright** game data, "
         "organized for easy browsing.",
         "",
-        f"![Game Version](https://img.shields.io/badge/Game%20Version-{version}-black)",
+        f"![Game Version](https://img.shields.io/badge/Game%20Version-{version}-black?logo=unrealengine)",
         "[![GitHub](https://img.shields.io/badge/Source%20Code-GitHub-black?logo=github)]"
         "(https://github.com/r0ute/bw-data)",
         "",
