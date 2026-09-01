@@ -22,18 +22,11 @@ def _usable_object_name(value: str) -> str:
     return value.strip()
 
 
-def _is_quest_object(obj: dict) -> bool:
-    value = obj.get("Type")
-
-    if not isinstance(value, str):
-        return False
-
-    return "quest" in value.casefold()
-
-
 def _quest_object(objects: list[dict]) -> dict | None:
     for obj in objects:
-        if _is_quest_object(obj):
+        value = obj.get("Type")
+
+        if isinstance(value, str) and "quest" in value.casefold():
             return obj
 
     return None
@@ -42,6 +35,10 @@ def _quest_object(objects: list[dict]) -> dict | None:
 def _properties(obj: dict) -> dict:
     value = obj.get("Properties")
     return value if isinstance(value, dict) else {}
+
+
+def _property(obj: dict, name: str):
+    return _properties(obj).get(name)
 
 
 def _text(value) -> str:
@@ -64,12 +61,8 @@ def _text(value) -> str:
     return ""
 
 
-def _title(obj: dict) -> str:
-    return _text(_properties(obj).get("Title"))
-
-
-def _summary(obj: dict) -> str:
-    return _text(_properties(obj).get("Summary"))
+def _text_property(obj: dict, name: str) -> str:
+    return _text(_property(obj, name))
 
 
 def _description(obj: dict) -> str:
@@ -145,8 +138,8 @@ def _reward_name(value) -> str:
         return ""
 
     words = _split_words(name)
-
     result = []
+
     for word in words:
         if word and word[-1].isdigit():
             split_at = len(word)
@@ -155,8 +148,12 @@ def _reward_name(value) -> str:
                 split_at -= 1
 
             if split_at > 0:
-                result.append(word[:split_at])
-                result.append(word[split_at:])
+                result.extend(
+                    [
+                        word[:split_at],
+                        word[split_at:],
+                    ]
+                )
                 continue
 
         result.append(word)
@@ -164,11 +161,8 @@ def _reward_name(value) -> str:
     return " ".join(result)
 
 
-def _table_reward(
-    table: dict,
-) -> QuestReward | None:
-    table_ref = table.get("Table")
-    name = _reward_name(table_ref)
+def _table_reward(table: dict) -> QuestReward | None:
+    name = _reward_name(table.get("Table"))
 
     if not name:
         return None
@@ -181,24 +175,15 @@ def _table_reward(
         max_amount = None
     else:
         min_amount = _int(min_multiplier, 1)
-        max_amount = _int(
-            max_multiplier,
-            min_amount,
-        )
+        max_amount = _int(max_multiplier, min_amount)
 
-    run_chance = _float(
-        table.get("RunChance"),
-        1.0,
-    )
+    run_chance = _float(table.get("RunChance"), 1.0)
     per_iteration_chance = _float(
         table.get("PerIterationRunChance"),
         run_chance,
     )
 
-    min_iterations = _int(
-        table.get("MinIterations"),
-        1,
-    )
+    min_iterations = _int(table.get("MinIterations"), 1)
     max_iterations = _int(
         table.get("MaxIterations"),
         min_iterations,
@@ -206,19 +191,17 @@ def _table_reward(
 
     per_roll = min_iterations != max_iterations
 
-    chance = per_iteration_chance if per_roll else run_chance
-
     return QuestReward(
         name=name,
         min_amount=min_amount,
         max_amount=max_amount,
-        chance=chance,
+        chance=per_iteration_chance if per_roll else run_chance,
         per_roll=per_roll,
     )
 
 
 def _rewards(obj: dict) -> tuple[QuestReward, ...]:
-    item_reward = _properties(obj).get("ItemReward")
+    item_reward = _property(obj, "ItemReward")
 
     if not isinstance(item_reward, dict):
         return ()
@@ -240,12 +223,8 @@ def _rewards(obj: dict) -> tuple[QuestReward, ...]:
             rewards.append(
                 QuestReward(
                     name=name,
-                    min_amount=_int(
-                        output.get("MinQuantity"),
-                    ),
-                    max_amount=_int(
-                        output.get("MaxQuantity"),
-                    ),
+                    min_amount=_int(output.get("MinQuantity")),
+                    max_amount=_int(output.get("MaxQuantity")),
                 )
             )
 
@@ -264,18 +243,8 @@ def _rewards(obj: dict) -> tuple[QuestReward, ...]:
     return tuple(rewards)
 
 
-def _renown_reward(obj: dict) -> int:
-    return _int(_properties(obj).get("RenownReward"))
-
-
-def _village_trust_reward(obj: dict) -> int:
-    return _int(_properties(obj).get("VillageTrustReward"))
-
-
-def _subquests(
-    obj: dict,
-) -> list[tuple[str, str, bool]]:
-    values = _properties(obj).get("Subquests")
+def _subquests(obj: dict) -> list[tuple[str, str, bool]]:
+    values = _property(obj, "Subquests")
 
     if not isinstance(values, list):
         return []
@@ -291,7 +260,7 @@ def _subquests(
         if not name:
             continue
 
-        quest_type = value.get("Type", "")
+        quest_type = value.get("Type")
 
         if not isinstance(quest_type, str):
             quest_type = ""
@@ -359,7 +328,7 @@ def _step_title(
     step_name: str,
     step_object: dict,
 ) -> str:
-    title = _title(step_object)
+    title = _text_property(step_object, "Title")
 
     if title and title.casefold() != quest_title.casefold():
         return title
@@ -421,10 +390,7 @@ def parse_quest(
     if quest_object is None:
         return None
 
-    if not isinstance(
-        _properties(quest_object).get("Subquests"),
-        list,
-    ):
+    if not isinstance(_property(quest_object, "Subquests"), list):
         return None
 
     name = _usable_object_name(_object_name(quest_object))
@@ -432,7 +398,7 @@ def parse_quest(
     if not name:
         name = path.stem
 
-    title = _title(quest_object) or name
+    title = _text_property(quest_object, "Title") or name
 
     return Quest(
         name=name,
@@ -443,7 +409,7 @@ def parse_quest(
             category,
         ),
         title=title,
-        summary=_summary(quest_object),
+        summary=_text_property(quest_object, "Summary"),
         steps=_resolve_steps(
             name,
             title,
@@ -451,8 +417,8 @@ def parse_quest(
             directory_objects,
         ),
         rewards=_rewards(quest_object),
-        renown_reward=_renown_reward(quest_object),
-        village_trust_reward=_village_trust_reward(quest_object),
+        renown_reward=_int(_property(quest_object, "RenownReward")),
+        village_trust_reward=_int(_property(quest_object, "VillageTrustReward")),
     )
 
 
