@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from .model import Quest, QuestReward, QuestStep
+from .model import Quest, QuestItem, QuestReward, QuestStep
 
 ObjectIndex = dict[str, tuple[Path, list[dict]]]
 
@@ -129,6 +129,40 @@ def _float(value, default: float = 0.0) -> float:
             pass
 
     return default
+
+
+def _items(obj: dict) -> tuple[QuestItem, ...]:
+    values = _property(obj, "Items")
+
+    if not isinstance(values, list):
+        return ()
+
+    result = []
+
+    for value in values:
+        if not isinstance(value, dict):
+            continue
+
+        item_name = _class_name(value.get("ItemClass"))
+
+        if not item_name:
+            continue
+
+        min_amount = _int(value.get("MinAmount"))
+        max_amount = _int(
+            value.get("MaxAmount"),
+            min_amount,
+        )
+
+        result.append(
+            QuestItem(
+                name=item_name,
+                min_amount=min_amount,
+                max_amount=max_amount,
+            )
+        )
+
+    return tuple(result)
 
 
 def _reward_name(value) -> str:
@@ -371,6 +405,7 @@ def _resolve_steps(
                 summary=_description(step_object),
                 type=quest_type,
                 group_next=group_next,
+                items=_items(step_object),
             )
         )
 
