@@ -58,47 +58,17 @@ def _format_rewards(
     return guaranteed, random
 
 
-def _write_giver_npcs(
+def _write_quest_info(
     lines: list[str],
     quest: Quest,
 ) -> None:
-    if not quest.giver and not quest.npcs:
-        return
-
-    lines.extend(
-        [
-            "## Giver / NPCs",
-            "",
-        ]
-    )
-
-    if quest.giver:
-        lines.append(f"- **Giver:** {quest.giver}")
-
-    if quest.npcs:
-        lines.append(f"- **NPCs:** {', '.join(quest.npcs)}")
-
-    lines.append("")
-
-
-def _write_rewards(
-    lines: list[str],
-    quest: Quest,
-) -> None:
-    if (
-        quest.village_trust_reward <= 0
-        and quest.money_reward <= 0
-        and quest.renown_reward <= 0
-        and not quest.rewards
-    ):
-        return
-
-    lines.extend(
-        [
-            "## Rewards",
-            "",
-        ]
-    )
+    if quest.summary:
+        lines.extend(
+            [
+                quest.summary,
+                "",
+            ]
+        )
 
     guaranteed = []
 
@@ -112,27 +82,24 @@ def _write_rewards(
         guaranteed.append(f"Renown x {quest.renown_reward}")
 
     reward_guaranteed, random = _format_rewards(quest.rewards)
-
     guaranteed.extend(reward_guaranteed)
 
-    for reward in guaranteed:
-        lines.append(f"- {reward}")
+    if not quest.giver and not quest.npcs and not guaranteed and not random:
+        return
 
-    if guaranteed:
-        lines.append("")
+    giver = quest.giver or ""
+    npcs = "<br>".join(quest.npcs)
+    rewards = "<br>".join(guaranteed)
+    random_rewards = "<br>".join(random)
 
-    if random:
-        lines.extend(
-            [
-                "### Random",
-                "",
-            ]
-        )
-
-        for reward in random:
-            lines.append(f"- {reward}")
-
-        lines.append("")
+    lines.extend(
+        [
+            "| Giver | NPCs | Rewards | Random Rewards |",
+            "|---|---|---|---|",
+            f"| {giver} | {npcs} | {rewards} | {random_rewards} |",
+            "",
+        ]
+    )
 
 
 def _write_step_row(
@@ -154,6 +121,13 @@ def _write_steps(
     lines: list[str],
     steps: tuple[QuestStep, ...],
 ) -> None:
+    lines.extend(
+        [
+            "## Steps",
+            "",
+        ]
+    )
+
     lines.extend(
         [
             "| # | Step | Summary | NPC | Items to bring | Completion |",
@@ -223,32 +197,12 @@ def _write_quest_page(
         "",
     ]
 
-    if quest.summary:
-        lines.extend(
-            [
-                quest.summary,
-                "",
-            ]
-        )
-
-    _write_giver_npcs(
-        lines,
-        quest,
-    )
-
-    _write_rewards(
+    _write_quest_info(
         lines,
         quest,
     )
 
     if quest.steps:
-        lines.extend(
-            [
-                "## Steps",
-                "",
-            ]
-        )
-
         _write_steps(
             lines,
             quest.steps,
