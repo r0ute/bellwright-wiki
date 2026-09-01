@@ -127,10 +127,20 @@ def _write_step_content(
     if step.items:
         lines.extend(
             [
-                f"**Items to bring:** {_format_items(step.items)}",
+                "### Items to bring",
                 "",
             ]
         )
+
+        for item in step.items:
+            if item.min_amount == item.max_amount:
+                amount = str(item.min_amount)
+            else:
+                amount = f"{item.min_amount}-{item.max_amount}"
+
+            lines.append(f"- {item.name} x {amount}")
+
+        lines.append("")
 
 
 def _write_step(
