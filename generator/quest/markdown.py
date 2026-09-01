@@ -31,7 +31,7 @@ def _format_reward(reward: QuestReward) -> str:
         value = f"{value} x {amount}"
 
     if reward.chance is not None:
-        chance = f"{reward.chance:g}%"
+        chance = f"{reward.chance * 100:g}%"
 
         if reward.per_roll:
             chance += "/roll"
@@ -62,7 +62,11 @@ def _write_rewards(
     lines: list[str],
     quest: Quest,
 ) -> None:
-    if not quest.rewards and quest.renown_reward <= 0:
+    if (
+        not quest.rewards
+        and quest.renown_reward <= 0
+        and quest.village_trust_reward <= 0
+    ):
         return
 
     lines.extend(
@@ -72,20 +76,21 @@ def _write_rewards(
         ]
     )
 
-    if quest.renown_reward > 0:
-        lines.extend(
-            [
-                f"- Renown x {quest.renown_reward}",
-                "",
-            ]
-        )
+    guaranteed = []
 
-    guaranteed, random = _format_rewards(quest.rewards)
+    if quest.renown_reward > 0:
+        guaranteed.append(f"Renown x {quest.renown_reward}")
+
+    if quest.village_trust_reward > 0:
+        guaranteed.append(f"Village Trust x {quest.village_trust_reward}")
+
+    reward_guaranteed, random = _format_rewards(quest.rewards)
+
+    guaranteed.extend(reward_guaranteed)
 
     if guaranteed:
         lines.extend(
             [
-                "### Guaranteed",
                 f"- {', '.join(guaranteed)}",
                 "",
             ]

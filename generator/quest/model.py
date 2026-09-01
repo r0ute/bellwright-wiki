@@ -41,6 +41,7 @@ class Quest:
     steps: tuple[QuestStep, ...] = field(default_factory=tuple)
     rewards: tuple[QuestReward, ...] = field(default_factory=tuple)
     renown_reward: int = 0
+    village_trust_reward: int = 0
 
 
 @dataclass

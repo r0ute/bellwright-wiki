@@ -268,6 +268,10 @@ def _renown_reward(obj: dict) -> int:
     return _int(_properties(obj).get("RenownReward"))
 
 
+def _village_trust_reward(obj: dict) -> int:
+    return _int(_properties(obj).get("VillageTrustReward"))
+
+
 def _subquests(
     obj: dict,
 ) -> list[tuple[str, str, bool]]:
@@ -448,6 +452,7 @@ def parse_quest(
         ),
         rewards=_rewards(quest_object),
         renown_reward=_renown_reward(quest_object),
+        village_trust_reward=_village_trust_reward(quest_object),
     )
 
 
