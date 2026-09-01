@@ -276,7 +276,6 @@ def generate(
         markdown.write_page(
             equipment_docs / f"{slug}.md",
             title=title,
-            description=f"{total} matching assets",
             sections=sections,
         )
 

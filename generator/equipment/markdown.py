@@ -34,7 +34,6 @@ def render_table(
 
 def render_page(
     title: str,
-    description: str,
     rows: list[dict] | None = None,
     headers: list[str] | None = None,
     sections: dict[str, tuple[list[str], list[dict]]] | None = None,
@@ -65,8 +64,6 @@ def render_page(
         "",
         f"# {title}",
         "",
-        f"*{description}*",
-        "",
     ]
 
     # Optional links, primarily used by index.md.
@@ -96,7 +93,6 @@ def render_page(
 def write_page(
     output: Path,
     title: str,
-    description: str,
     rows: list[dict] | None = None,
     headers: list[str] | None = None,
     sections: dict[str, tuple[list[str], list[dict]]] | None = None,
@@ -108,7 +104,6 @@ def write_page(
     output.write_text(
         render_page(
             title=title,
-            description=description,
             rows=rows,
             headers=headers,
             sections=sections,
