@@ -1,2 +1,4 @@
 title: Bellwright Data
 markdown: kramdown
+plugins:
+  - jekyll-sitemap
