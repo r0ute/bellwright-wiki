@@ -7,6 +7,23 @@ from .model import Quest
 from .parser import ObjectIndex, parse_quest
 from .reader import read_objects
 
+QUEST_ROOT = Path("Bellwright/Content/Mist/Data/Quests")
+CATEGORY_BLACKLIST = {"BaseBringItemQuest"}
+
+
+def _categories(assets: Path) -> set[str]:
+    """Discover quest categories from the extracted quest directory."""
+    root = assets / QUEST_ROOT
+
+    if not root.is_dir():
+        return set()
+
+    return {
+        path.name
+        for path in root.iterdir()
+        if path.is_dir() and path.name not in CATEGORY_BLACKLIST
+    }
+
 
 def _category(
     relative: Path,
@@ -50,10 +67,7 @@ def _index_objects(
             if not name:
                 continue
 
-            indexes.setdefault(
-                path.parent,
-                {},
-            )[name] = (
+            indexes.setdefault(path.parent, {})[name] = (
                 path,
                 objects,
             )
@@ -79,9 +93,10 @@ def _sort_quests(
 
 def discover_quests(
     assets: Path,
-    categories: set[str],
 ) -> dict[str, list[Quest]]:
-    """Discover quests belonging to configured categories."""
+    """Discover quests belonging to all discovered categories."""
+    categories = _categories(assets)
+
     quests_by_category = {category: [] for category in categories}
 
     paths = list(discover_json(assets))

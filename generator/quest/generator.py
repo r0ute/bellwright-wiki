@@ -6,8 +6,6 @@ from .markdown import write_category, write_root
 from .scanner import discover_quests
 from .tree import build_tree
 
-QUEST_CATEGORIES = {"MainQuest", "SideQuests", "Liberation", "RaidMap"}
-
 TITLE = "Quests"
 
 
@@ -17,12 +15,8 @@ def generate(
     icon_out: Path,
     icon_index: dict,
 ) -> dict:
-    """Generate the configured quest categories."""
-
-    quests_by_category = discover_quests(
-        assets,
-        QUEST_CATEGORIES,
-    )
+    """Generate all discovered quest categories."""
+    quests_by_category = discover_quests(assets)
 
     print(
         f"Quests indexed: {sum(len(quests) for quests in quests_by_category.values())}"
@@ -37,10 +31,9 @@ def generate(
     pages = []
     categories = []
 
-    for category in QUEST_CATEGORIES:
+    for category in quests_by_category:
         slug = category.lower()
         quests = quests_by_category[category]
-
         tree = build_tree(
             category,
             quests,
