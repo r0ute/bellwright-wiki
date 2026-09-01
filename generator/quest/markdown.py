@@ -92,22 +92,24 @@ def _write_rewards(
 
     guaranteed.extend(reward_guaranteed)
 
+    for reward in guaranteed:
+        lines.append(f"- {reward}")
+
     if guaranteed:
-        lines.extend(
-            [
-                f"- {', '.join(guaranteed)}",
-                "",
-            ]
-        )
+        lines.append("")
 
     if random:
         lines.extend(
             [
                 "### Random",
-                f"- {', '.join(random)}",
                 "",
             ]
         )
+
+        for reward in random:
+            lines.append(f"- {reward}")
+
+        lines.append("")
 
 
 def _write_step_content(
