@@ -417,6 +417,7 @@ def parse_quest(
             directory_objects,
         ),
         rewards=_rewards(quest_object),
+        money_reward=_int(_property(quest_object, "MoneyReward")),
         renown_reward=_int(_property(quest_object, "RenownReward")),
         village_trust_reward=_int(_property(quest_object, "VillageTrustReward")),
     )

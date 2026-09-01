@@ -40,6 +40,7 @@ class Quest:
     summary: str = ""
     steps: tuple[QuestStep, ...] = field(default_factory=tuple)
     rewards: tuple[QuestReward, ...] = field(default_factory=tuple)
+    money_reward: int = 0
     renown_reward: int = 0
     village_trust_reward: int = 0
 

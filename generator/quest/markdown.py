@@ -63,9 +63,10 @@ def _write_rewards(
     quest: Quest,
 ) -> None:
     if (
-        not quest.rewards
+        quest.village_trust_reward <= 0
+        and quest.money_reward <= 0
         and quest.renown_reward <= 0
-        and quest.village_trust_reward <= 0
+        and not quest.rewards
     ):
         return
 
@@ -78,11 +79,14 @@ def _write_rewards(
 
     guaranteed = []
 
-    if quest.renown_reward > 0:
-        guaranteed.append(f"Renown x {quest.renown_reward}")
-
     if quest.village_trust_reward > 0:
         guaranteed.append(f"Village Trust x {quest.village_trust_reward}")
+
+    if quest.money_reward > 0:
+        guaranteed.append(f"Money x {quest.money_reward}")
+
+    if quest.renown_reward > 0:
+        guaranteed.append(f"Renown x {quest.renown_reward}")
 
     reward_guaranteed, random = _format_rewards(quest.rewards)
 
