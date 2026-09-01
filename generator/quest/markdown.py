@@ -146,7 +146,7 @@ def _write_step_row(
     completion = step.completion_text or ""
 
     lines.append(
-        f"| {number} | {step.name} | {npc} | {summary} | {items} | {completion} |"
+        f"| {number} | {step.name} | {summary} | {npc} | {items} | {completion} |"
     )
 
 
@@ -156,7 +156,7 @@ def _write_steps(
 ) -> None:
     lines.extend(
         [
-            "| # | Step | NPC | Summary | Items to bring | Completion |",
+            "| # | Step | Summary | NPC | Items to bring | Completion |",
             "|---|---|---|---|---|---|",
         ]
     )
