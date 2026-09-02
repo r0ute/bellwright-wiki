@@ -49,14 +49,6 @@ document.querySelectorAll("table").forEach((table) => {
 
 document.querySelector(".logo")?.addEventListener("click", (event) => {
     const logo = event.currentTarget;
-    const rect = logo.getBoundingClientRect();
-    const style = getComputedStyle(logo, "::before");
-
-    if (
-        event.clientX > rect.left + parseFloat(style.width) ||
-        event.clientY > rect.top + parseFloat(style.height)
-    ) return;
-
     logo.classList.remove("ringing");
     void logo.offsetWidth;
     logo.classList.add("ringing");
