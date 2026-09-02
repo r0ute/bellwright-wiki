@@ -463,8 +463,9 @@ def _quest_npcs(
     result = []
 
     for npc in _required_npcs(quest_object):
-        if npc.casefold() != giver.casefold():
-            result.append(npc)
+        if npc and npc.casefold() != giver.casefold():
+            if npc not in result:
+                result.append(npc)
 
     for step in steps:
         if (

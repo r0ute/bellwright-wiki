@@ -96,10 +96,6 @@ def write_page(
     headers: list[str] | None = None,
     sections: dict[str, tuple[list[str], list[dict]]] | None = None,
     links: list[tuple[str, str]] | None = None,
-    parent: str | None = None,
-    parent_path: str | None = None,
-    grand_parent: str | None = None,
-    grand_parent_path: str | None = None,
 ) -> None:
     """Write a rendered Markdown page."""
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -111,10 +107,6 @@ def write_page(
             headers=headers,
             sections=sections,
             links=links,
-            parent=parent,
-            parent_path=parent_path,
-            grand_parent=grand_parent,
-            grand_parent_path=grand_parent_path,
         ),
         encoding="utf-8",
     )
