@@ -50,6 +50,7 @@
   width: 96px;
   margin: 0 auto;
   transform-origin: top center;
+  background: url("T_Logo.webp") center / contain no-repeat;
 }
 
 .logo.ringing {

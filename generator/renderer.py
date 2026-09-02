@@ -76,9 +76,9 @@ def write_index_page(
         "layout: default",
         "title: Bellwright Wiki & Guide",
         "---",
+        '<div class="logo" />',
         "",
         "# Bellwright Wiki & Guide",
-        "{: .logo}",
         "",
         "A searchable **Bellwright wiki and database** with quests, items, "
         "NPCs, rewards, recipes, resources, crafting, locations, guides, "
