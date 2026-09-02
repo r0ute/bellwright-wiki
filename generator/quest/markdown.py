@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from ..navigation import breadcrumb_include, navigation_metadata
 from .model import Quest, QuestItem, QuestNode, QuestReward, QuestStep
 
 
@@ -174,27 +175,15 @@ def _write_front_matter(
             "---",
             "layout: default",
             f"title: {json.dumps(title)}",
-        ]
-    )
-
-    if parent:
-        lines.append(f"parent: {parent}")
-
-    if parent_url:
-        lines.append(f"parent_url: {parent_url}")
-
-    if grand_parent:
-        lines.append(f"grand_parent: {grand_parent}")
-
-    if grand_parent_url:
-        lines.append(f"grand_parent_url: {grand_parent_url}")
-
-    lines.extend(
-        [
+            *navigation_metadata(
+                parent=parent,
+                parent_path=parent_url,
+                grand_parent=grand_parent,
+                grand_parent_path=grand_parent_url,
+            ),
             "---",
             "",
-            "{% include breadcrumbs.html %}",
-            "",
+            *breadcrumb_include(),
         ]
     )
 

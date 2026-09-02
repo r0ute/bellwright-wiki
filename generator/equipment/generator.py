@@ -254,7 +254,6 @@ def generate(
             {
                 "title": title,
                 "slug": f"equipment/{slug}",
-                "parent": "Equipment",
             }
         )
 
