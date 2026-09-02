@@ -11,7 +11,7 @@ def page_url(path: str) -> str:
     if normalized.endswith(".md"):
         normalized = normalized[:-3]
 
-    return f"/{normalized}.html"
+    return f"/{normalized}"
 
 
 def navigation_metadata(

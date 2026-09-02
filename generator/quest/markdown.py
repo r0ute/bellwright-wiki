@@ -344,7 +344,7 @@ def _write_tree(
         padding = "  " * indent
 
         if child.quest is not None:
-            lines.append(f"{padding}- [{child.name}]({prefix}{key}.md)")
+            lines.append(f"{padding}- [{child.name}]({prefix}{key})")
         else:
             lines.append(f"{padding}- {child.name}")
 
@@ -365,7 +365,7 @@ def write_category(
 
     directory = docs / category_slug
 
-    category_url = f"/quest/{category_slug}.md"
+    category_url = f"/quest/{category_slug}"
 
     _write_directory(
         tree,

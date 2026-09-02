@@ -49,7 +49,7 @@ def generate(
         pages.append(
             {
                 "title": category,
-                "slug": f"quest/{slug}.md",
+                "slug": f"quest/{slug}",
             }
         )
 
