@@ -253,7 +253,7 @@ def generate(
         pages.append(
             {
                 "title": title,
-                "slug": f"equipment/{slug}.md",
+                "slug": f"equipment/{slug}",
                 "parent": "Equipment",
             }
         )
