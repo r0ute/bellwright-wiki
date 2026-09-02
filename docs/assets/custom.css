@@ -44,7 +44,6 @@
 }
 
 /** logo **/
-
 .logo {
   cursor: pointer;
   display: block;
@@ -53,7 +52,16 @@
   transform-origin: top center;
 }
 
-.logo.ringing {
+.logo::before {
+  content: "";
+  display: block;
+  width: 96px;
+  aspect-ratio: 660 / 795;
+  margin: 0 auto 12px;
+  background: url("T_Logo.webp") center / contain no-repeat;
+}
+
+.logo.ringing::before {
   animation: bell-ring 1s ease-in-out;
 }
 
