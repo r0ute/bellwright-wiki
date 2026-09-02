@@ -1,5 +1,7 @@
 """Navigation metadata for generated Jekyll pages."""
 
+import json
+
 
 def page_url(path: str) -> str:
     """Convert a generated Markdown path to its Jekyll page URL."""
@@ -25,13 +27,13 @@ def navigation_metadata(
     lines: list[str] = []
 
     if parent:
-        lines.append(f"parent: {parent}")
+        lines.append(f"parent: {json.dumps(parent)}")
 
         if parent_path:
             lines.append(f"parent_url: {page_url(parent_path)}")
 
     if grand_parent:
-        lines.append(f"grand_parent: {grand_parent}")
+        lines.append(f"grand_parent: {json.dumps(grand_parent)}")
 
         if grand_parent_path:
             lines.append(f"grand_parent_url: {page_url(grand_parent_path)}")
