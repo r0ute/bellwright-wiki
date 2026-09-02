@@ -1,5 +1,6 @@
 """Render quest documentation to Markdown."""
 
+import json
 from pathlib import Path
 
 from .model import Quest, QuestItem, QuestNode, QuestReward, QuestStep
@@ -190,7 +191,7 @@ def _write_front_matter(
         [
             "---",
             "layout: default",
-            f"title: {title}",
+            f"title: {json.dumps(title)}",
         ]
     )
 

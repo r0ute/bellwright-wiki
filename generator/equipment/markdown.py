@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from ..navigation import breadcrumb_include, navigation_metadata
@@ -51,7 +52,7 @@ def render_page(
     lines = [
         "---",
         "layout: default",
-        f"title: {title}",
+        f"title: {json.dumps(title)}",
         *navigation_metadata(
             parent=parent,
             parent_path=parent_path,
