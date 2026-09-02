@@ -234,8 +234,6 @@ def _write_quest_page(
         quest.title,
         parent=parent,
         parent_url=parent_url,
-        grand_parent="Quests",
-        grand_parent_url="/quest.md",
     )
 
     lines.extend(
@@ -388,21 +386,4 @@ def write_category(
         docs / f"{category_slug}.md",
         tree.name,
         index_lines,
-        parent="Quests",
-        parent_url="/quest.md",
-    )
-
-
-def write_root(
-    docs: Path,
-    categories: list[tuple[str, str]],
-) -> None:
-    """Write the root quest page."""
-
-    lines = [f"- [{title}]({slug}.md)" for title, slug in categories]
-
-    _write_page(
-        docs / "quest.md",
-        "Quests",
-        lines,
     )
