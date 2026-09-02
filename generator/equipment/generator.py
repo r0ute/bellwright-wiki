@@ -66,8 +66,10 @@ def is_player_item(properties: dict) -> bool:
     for recipe in recipes:
         if not isinstance(recipe, dict):
             continue
+
         if recipe.get("bIsSystemRecipe", False):
             continue
+
         if recipe.get("RequiredUnlockable"):
             return True
 
@@ -245,6 +247,7 @@ def generate(
     )
 
     pages = []
+
     equipment_docs = docs / "equipment"
     equipment_docs.mkdir(
         parents=True,
@@ -277,12 +280,15 @@ def generate(
             equipment_docs / f"{slug}.md",
             title=title,
             sections=sections,
+            parent="Equipment",
+            parent_path="index.md",
         )
 
         pages.append(
             {
                 "title": title,
                 "slug": f"equipment/{slug}.md",
+                "parent": "Equipment",
             }
         )
 

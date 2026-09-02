@@ -178,24 +178,72 @@ def _write_steps(
     lines.append("")
 
 
+def _write_front_matter(
+    lines: list[str],
+    title: str,
+    parent: str | None = None,
+    parent_url: str | None = None,
+    grand_parent: str | None = None,
+    grand_parent_url: str | None = None,
+) -> None:
+    lines.extend(
+        [
+            "---",
+            "layout: default",
+            f"title: {title}",
+        ]
+    )
+
+    if parent:
+        lines.append(f"parent: {parent}")
+
+    if parent_url:
+        lines.append(f"parent_url: {parent_url}")
+
+    if grand_parent:
+        lines.append(f"grand_parent: {grand_parent}")
+
+    if grand_parent_url:
+        lines.append(f"grand_parent_url: {grand_parent_url}")
+
+    lines.extend(
+        [
+            "---",
+            "",
+            "{% include breadcrumbs.html %}",
+            "",
+        ]
+    )
+
+
 def _write_quest_page(
     path: Path,
     quest: Quest,
+    parent: str,
+    parent_url: str,
 ) -> None:
     path.parent.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    lines = [
-        "---",
-        "layout: default",
-        f"title: {quest.title}",
-        "---",
-        "",
-        f"# {quest.title}",
-        "",
-    ]
+    lines: list[str] = []
+
+    _write_front_matter(
+        lines,
+        quest.title,
+        parent=parent,
+        parent_url=parent_url,
+        grand_parent="Quests",
+        grand_parent_url="/quest.md",
+    )
+
+    lines.extend(
+        [
+            f"# {quest.title}",
+            "",
+        ]
+    )
 
     _write_quest_info(
         lines,
@@ -218,23 +266,31 @@ def _write_page(
     path: Path,
     title: str,
     lines: list[str],
+    parent: str | None = None,
+    parent_url: str | None = None,
 ) -> None:
     path.parent.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    content = [
-        "---",
-        "layout: default",
-        f"title: {title}",
-        "---",
-        "",
-        f"# {title}",
-        "",
-        *lines,
-        "",
-    ]
+    content: list[str] = []
+
+    _write_front_matter(
+        content,
+        title,
+        parent=parent,
+        parent_url=parent_url,
+    )
+
+    content.extend(
+        [
+            f"# {title}",
+            "",
+            *lines,
+            "",
+        ]
+    )
 
     path.write_text(
         "\n".join(content),
@@ -245,12 +301,16 @@ def _write_page(
 def _write_directory(
     node: QuestNode,
     directory: Path,
+    category: str,
+    category_url: str,
 ) -> None:
     """Write quest pages while using tree nodes as directories."""
     if node.quest is not None:
         _write_quest_page(
             directory.with_suffix(".md"),
             node.quest,
+            parent=category,
+            parent_url=category_url,
         )
 
     if not node.children:
@@ -268,6 +328,8 @@ def _write_directory(
         _write_directory(
             child,
             directory / key,
+            category,
+            category_url,
         )
 
 
@@ -305,9 +367,13 @@ def write_category(
 
     directory = docs / category_slug
 
+    category_url = f"/quest/{category_slug}.md"
+
     _write_directory(
         tree,
         directory,
+        category=tree.name,
+        category_url=category_url,
     )
 
     index_lines: list[str] = []
@@ -322,6 +388,8 @@ def write_category(
         docs / f"{category_slug}.md",
         tree.name,
         index_lines,
+        parent="Quests",
+        parent_url="/quest.md",
     )
 
 
