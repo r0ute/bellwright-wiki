@@ -1,7 +1,9 @@
 """Render quest documentation to Markdown."""
 
+import json
 from pathlib import Path
 
+from ..navigation import breadcrumb_include, navigation_metadata
 from .model import Quest, QuestItem, QuestNode, QuestReward, QuestStep
 
 
@@ -87,16 +89,14 @@ def _write_quest_info(
     if not quest.giver and not quest.npcs and not guaranteed and not random:
         return
 
-    giver = quest.giver or ""
-    npcs = "<br>".join(quest.npcs)
-    rewards = "<br>".join(guaranteed)
-    random_rewards = "<br>".join(random)
-
     lines.extend(
         [
             "| Giver | NPCs | Rewards | Random Rewards |",
             "|---|---|---|---|",
-            f"| {giver} | {npcs} | {rewards} | {random_rewards} |",
+            (
+                f"| {quest.giver} | {'<br>'.join(quest.npcs)} | "
+                f"{'<br>'.join(guaranteed)} | {'<br>'.join(random)} |"
+            ),
             "",
         ]
     )
@@ -107,13 +107,10 @@ def _write_step_row(
     number: str,
     step: QuestStep,
 ) -> None:
-    summary = step.summary or ""
-    npc = step.npc or ""
-    items = _format_items(step.items) if step.items else ""
-    completion = step.completion_text or ""
-
     lines.append(
-        f"| {number} | {step.name} | {summary} | {npc} | {items} | {completion} |"
+        f"| {number} | {step.name} | {step.summary or ''} | "
+        f"{step.npc or ''} | {_format_items(step.items)} | "
+        f"{step.completion_text or ''} |"
     )
 
 
@@ -125,11 +122,6 @@ def _write_steps(
         [
             "## Steps",
             "",
-        ]
-    )
-
-    lines.extend(
-        [
             "| # | Step | Summary | NPC | Items to bring | Completion |",
             "|---|---|---|---|---|---|",
         ]
@@ -142,12 +134,7 @@ def _write_steps(
         step = steps[index]
 
         if not step.group_next:
-            _write_step_row(
-                lines,
-                str(number),
-                step,
-            )
-
+            _write_step_row(lines, str(number), step)
             number += 1
             index += 1
             continue
@@ -162,10 +149,7 @@ def _write_steps(
             index += 1
             group.append(steps[index])
 
-        for offset, parallel_step in enumerate(
-            group,
-            start=1,
-        ):
+        for offset, parallel_step in enumerate(group, start=1):
             _write_step_row(
                 lines,
                 f"{number}.{offset}",
@@ -178,35 +162,60 @@ def _write_steps(
     lines.append("")
 
 
+def _write_front_matter(
+    lines: list[str],
+    title: str,
+    parent: str | None = None,
+    parent_url: str | None = None,
+    grand_parent: str | None = None,
+    grand_parent_url: str | None = None,
+) -> None:
+    lines.extend(
+        [
+            "---",
+            "layout: default",
+            f"title: {json.dumps(title)}",
+            *navigation_metadata(
+                parent=parent,
+                parent_path=parent_url,
+                grand_parent=grand_parent,
+                grand_parent_path=grand_parent_url,
+            ),
+            "---",
+            "",
+            *breadcrumb_include(),
+        ]
+    )
+
+
 def _write_quest_page(
     path: Path,
     quest: Quest,
+    parent: str,
+    parent_url: str,
 ) -> None:
-    path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    path.parent.mkdir(parents=True, exist_ok=True)
 
-    lines = [
-        "---",
-        "layout: default",
-        f"title: {quest.title}",
-        "---",
-        "",
-        f"# {quest.title}",
-        "",
-    ]
+    lines: list[str] = []
 
-    _write_quest_info(
+    _write_front_matter(
         lines,
-        quest,
+        quest.title,
+        parent=parent,
+        parent_url=parent_url,
     )
+
+    lines.extend(
+        [
+            f"# {quest.title}",
+            "",
+        ]
+    )
+
+    _write_quest_info(lines, quest)
 
     if quest.steps:
-        _write_steps(
-            lines,
-            quest.steps,
-        )
+        _write_steps(lines, quest.steps)
 
     path.write_text(
         "\n".join(lines),
@@ -218,23 +227,28 @@ def _write_page(
     path: Path,
     title: str,
     lines: list[str],
+    parent: str | None = None,
+    parent_url: str | None = None,
 ) -> None:
-    path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    content: list[str] = []
+
+    _write_front_matter(
+        content,
+        title,
+        parent=parent,
+        parent_url=parent_url,
     )
 
-    content = [
-        "---",
-        "layout: default",
-        f"title: {title}",
-        "---",
-        "",
-        f"# {title}",
-        "",
-        *lines,
-        "",
-    ]
+    content.extend(
+        [
+            f"# {title}",
+            "",
+            *lines,
+            "",
+        ]
+    )
 
     path.write_text(
         "\n".join(content),
@@ -245,21 +259,22 @@ def _write_page(
 def _write_directory(
     node: QuestNode,
     directory: Path,
+    category: str,
+    category_url: str,
 ) -> None:
     """Write quest pages while using tree nodes as directories."""
     if node.quest is not None:
         _write_quest_page(
             directory.with_suffix(".md"),
             node.quest,
+            parent=category,
+            parent_url=category_url,
         )
 
     if not node.children:
         return
 
-    directory.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    directory.mkdir(parents=True, exist_ok=True)
 
     for key, child in sorted(
         node.children.items(),
@@ -268,6 +283,8 @@ def _write_directory(
         _write_directory(
             child,
             directory / key,
+            category,
+            category_url,
         )
 
 
@@ -284,16 +301,17 @@ def _write_tree(
         padding = "  " * indent
 
         if child.quest is not None:
-            lines.append(f"{padding}- [{child.name}]({prefix}{key}.md)")
-        else:
-            lines.append(f"{padding}- {child.name}")
+            lines.append(f"{padding}- [{child.name}]({prefix}{key})")
+            continue
 
-            _write_tree(
-                lines,
-                child,
-                f"{prefix}{key}/",
-                indent + 1,
-            )
+        lines.append(f"{padding}- {child.name}")
+
+        _write_tree(
+            lines,
+            child,
+            f"{prefix}{key}/",
+            indent + 1,
+        )
 
 
 def write_category(
@@ -302,12 +320,14 @@ def write_category(
     tree: QuestNode,
 ) -> None:
     """Write a quest category."""
-
     directory = docs / category_slug
+    category_url = f"/quest/{category_slug}"
 
     _write_directory(
         tree,
         directory,
+        category=tree.name,
+        category_url=category_url,
     )
 
     index_lines: list[str] = []
@@ -322,19 +342,4 @@ def write_category(
         docs / f"{category_slug}.md",
         tree.name,
         index_lines,
-    )
-
-
-def write_root(
-    docs: Path,
-    categories: list[tuple[str, str]],
-) -> None:
-    """Write the root quest page."""
-
-    lines = [f"- [{title}]({slug}.md)" for title, slug in categories]
-
-    _write_page(
-        docs / "quest.md",
-        "Quests",
-        lines,
     )

@@ -1,0 +1,28 @@
+<div class="breadcrumbs">
+  <span class="breadcrumb">
+    <a href="{{ '/' | relative_url }}">Home</a>
+  </span>
+
+  {% if page.grand_parent %}
+  <span class="breadcrumb">
+    <span aria-hidden="true">›</span>
+    {% if page.grand_parent_url %}
+    <a href="{{ page.grand_parent_url | relative_url }}">
+      {{ page.grand_parent }}
+    </a>
+    {% else %} {{ page.grand_parent }} {% endif %}
+  </span>
+  {% endif %} {% if page.parent %}
+  <span class="breadcrumb">
+    <span aria-hidden="true">›</span>
+    {% if page.parent_url %}
+    <a href="{{ page.parent_url | relative_url }}"> {{ page.parent }} </a>
+    {% else %} {{ page.parent }} {% endif %}
+  </span>
+  {% endif %}
+
+  <span class="breadcrumb">
+    <span aria-hidden="true">›</span>
+    <span aria-current="page">{{ page.title }}</span>
+  </span>
+</div>

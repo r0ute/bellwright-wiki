@@ -1,4 +1,7 @@
+import json
 from pathlib import Path
+
+from ..navigation import breadcrumb_include, navigation_metadata
 
 
 def markdown_value(value) -> str:
@@ -38,35 +41,31 @@ def render_page(
     headers: list[str] | None = None,
     sections: dict[str, tuple[list[str], list[dict]]] | None = None,
     links: list[tuple[str, str]] | None = None,
+    parent: str | None = None,
+    parent_path: str | None = None,
+    grand_parent: str | None = None,
+    grand_parent_path: str | None = None,
 ) -> str:
-    """
-    Render a complete Markdown page.
-
-    `sections`:
-        {
-            "Weapons": (headers, rows),
-            "Tools": (headers, rows),
-        }
-
-    `links`:
-        [
-            ("Ammo", "ammo.md"),
-            ("Armors", "armors.md"),
-        ]
-    """
+    """Render a complete Markdown page."""
     headers = headers or []
 
     lines = [
         "---",
         "layout: default",
-        f"title: {title}",
+        f"title: {json.dumps(title)}",
+        *navigation_metadata(
+            parent=parent,
+            parent_path=parent_path,
+            grand_parent=grand_parent,
+            grand_parent_path=grand_parent_path,
+        ),
         "---",
         "",
+        *breadcrumb_include(),
         f"# {title}",
         "",
     ]
 
-    # Optional links, primarily used by index.md.
     if links:
         for link_title, link_target in links:
             lines.append(f"- [{link_title}]({link_target})")

@@ -42,10 +42,7 @@ def discover_items(
                     "path": path,
                     "properties": properties,
                     "category": (
-                        category.category_name_for(
-                            properties,
-                            category_index,
-                        )
+                        category.category_name_for(properties, category_index)
                         or "Uncategorized"
                     ),
                 }
@@ -63,15 +60,12 @@ def is_player_item(properties: dict) -> bool:
     if not isinstance(recipes, list):
         return False
 
-    for recipe in recipes:
-        if not isinstance(recipe, dict):
-            continue
-        if recipe.get("bIsSystemRecipe", False):
-            continue
-        if recipe.get("RequiredUnlockable"):
-            return True
-
-    return False
+    return any(
+        isinstance(recipe, dict)
+        and not recipe.get("bIsSystemRecipe", False)
+        and recipe.get("RequiredUnlockable")
+        for recipe in recipes
+    )
 
 
 def _item_context(
@@ -91,11 +85,7 @@ def _item_context(
     )
 
     if icon_path:
-        destination = icon.copy_icon(
-            icon_path,
-            icon_out,
-        )
-
+        destination = icon.copy_icon(icon_path, icon_out)
         context["icon"] = (
             f'<img src="../assets/icons/{destination.name}" '
             f'alt="{item["path"].stem}" width="48">'
@@ -112,24 +102,16 @@ def render_items(
 ) -> tuple[list[str], list[dict]]:
     """Extract and sort rows using a schema."""
     headers = list(schema.EQUIPMENT_FIELDS)
-    rows = []
 
-    for item in items:
-        context = _item_context(
-            item,
-            icon_index,
-            icon_out,
-        )
-
-        rows.append(
-            {
-                field: extractor(
-                    item["properties"],
-                    context,
-                )
-                for field, extractor in schema.EQUIPMENT_FIELDS.items()
-            }
-        )
+    rows = [
+        {
+            field: extractor(
+                item["properties"], _item_context(item, icon_index, icon_out)
+            )
+            for field, extractor in schema.EQUIPMENT_FIELDS.items()
+        }
+        for item in items
+    ]
 
     rows.sort(key=lambda row: str(row.get("Name", "")).lower())
 
@@ -147,10 +129,7 @@ def _schema_for(
         return schema
 
     if fallback_slug:
-        schema = load_schema(
-            fallback_slug,
-            fallback=False,
-        )
+        schema = load_schema(fallback_slug, fallback=False)
 
         if schema is not None:
             return schema
@@ -172,7 +151,6 @@ def build_sections(
     scope = category.category_row_scope(
         group_title,
         category_children,
-        category_titles,
     )
 
     group_items = [
@@ -205,7 +183,6 @@ def build_sections(
         child_scope = category.category_row_scope(
             child_title,
             category_children,
-            category_titles,
         )
 
         child_items = [
@@ -239,17 +216,11 @@ def generate(
 
     print(f"Equipment categories indexed: {len(category_titles)}")
 
-    items = discover_items(
-        assets,
-        category_index,
-    )
+    items = discover_items(assets, category_index)
+    equipment_docs = docs / "equipment"
+    equipment_docs.mkdir(parents=True, exist_ok=True)
 
     pages = []
-    equipment_docs = docs / "equipment"
-    equipment_docs.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
 
     group_keys = sorted(
         category_children.get("equipment", ()),
@@ -282,7 +253,7 @@ def generate(
         pages.append(
             {
                 "title": title,
-                "slug": f"equipment/{slug}.md",
+                "slug": f"equipment/{slug}",
             }
         )
 
