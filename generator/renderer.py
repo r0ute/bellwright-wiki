@@ -76,7 +76,7 @@ def write_index_page(
         "layout: default",
         "title: Bellwright Wiki & Guide",
         "---",
-        '<div class="logo" />',
+        '<div class="logo"></div>',
         "",
         "# Bellwright Wiki & Guide",
         "",
