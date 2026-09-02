@@ -1,4 +1,5 @@
 // table sorting
+
 document.querySelectorAll("table").forEach((table) => {
     const headers = table.querySelectorAll("thead th");
     const tbody = table.querySelector("tbody");
@@ -45,8 +46,16 @@ document.querySelectorAll("table").forEach((table) => {
 });
 
 // logo
+
 document.querySelector(".logo")?.addEventListener("click", (event) => {
     const logo = event.currentTarget;
+    const rect = logo.getBoundingClientRect();
+    const style = getComputedStyle(logo, "::before");
+
+    if (
+        event.clientX > rect.left + parseFloat(style.width) ||
+        event.clientY > rect.top + parseFloat(style.height)
+    ) return;
 
     logo.classList.remove("ringing");
     void logo.offsetWidth;
