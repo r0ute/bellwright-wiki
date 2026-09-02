@@ -1,7 +1,7 @@
-title: Bellwright Data
-description:
-  Bellwright database and reference with quests, items, NPCs, rewards, recipes,
-  resources, crafting, locations, and other game data.
+title: Bellwright Wiki & Guide
+description: >
+  Bellwright wiki and database with quests, items, NPCs, rewards, recipes,
+  resources, crafting, locations, guides, and other game data.
 markdown: kramdown
 plugins:
   - jekyll-sitemap
