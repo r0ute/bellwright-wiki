@@ -242,7 +242,6 @@ def build_category_hierarchy(
 ) -> tuple[dict[str, set[str]], dict[str, str]]:
     """Build the Equipment hierarchy from Parent references."""
     paths = _category_paths(assets_root)
-
     titles = {"equipment": "Equipment"}
 
     for path in paths:
@@ -275,7 +274,6 @@ def build_category_hierarchy(
 def category_row_scope(
     title: str,
     descendants: dict[str, set[str]],
-    titles: dict[str, str],
 ) -> set[str]:
     """Return a category and all descendants."""
     start = normalize_category_key(title)
