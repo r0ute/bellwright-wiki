@@ -1,37 +1,28 @@
-<nav class="breadcrumbs" aria-label="Breadcrumb">
-  <ol class="breadcrumbs__list">
-    <li class="breadcrumbs__item">
-      <a href="{{ '/' | relative_url }}">Home</a>
-    </li>
+<div class="breadcrumbs">
+  <span class="breadcrumb">
+    <a href="{{ '/' | relative_url }}">Home</a>
+  </span>
 
-    {% if page.grand_parent %}
-    <li class="breadcrumbs__separator" aria-hidden="true">›</li>
-    <li class="breadcrumbs__item">
-      {% if page.grand_parent_url %}
-      <a href="{{ page.grand_parent_url | relative_url }}">
-        {{ page.grand_parent }}
-      </a>
-      {% else %}
-      <span>{{ page.grand_parent }}</span>
-      {% endif %}
-    </li>
-    {% endif %} {% if page.parent %}
-    <li class="breadcrumbs__separator" aria-hidden="true">›</li>
-    <li class="breadcrumbs__item">
-      {% if page.parent_url %}
-      <a href="{{ page.parent_url | relative_url }}"> {{ page.parent }} </a>
-      {% else %}
-      <span>{{ page.parent }}</span>
-      {% endif %}
-    </li>
-    {% endif %}
+  {% if page.grand_parent %}
+  <span class="breadcrumb">
+    <span aria-hidden="true">›</span>
+    {% if page.grand_parent_url %}
+    <a href="{{ page.grand_parent_url | relative_url }}">
+      {{ page.grand_parent }}
+    </a>
+    {% else %} {{ page.grand_parent }} {% endif %}
+  </span>
+  {% endif %} {% if page.parent %}
+  <span class="breadcrumb">
+    <span aria-hidden="true">›</span>
+    {% if page.parent_url %}
+    <a href="{{ page.parent_url | relative_url }}"> {{ page.parent }} </a>
+    {% else %} {{ page.parent }} {% endif %}
+  </span>
+  {% endif %}
 
-    <li class="breadcrumbs__separator" aria-hidden="true">›</li>
-    <li
-      class="breadcrumbs__item breadcrumbs__item--current"
-      aria-current="page"
-    >
-      {{ page.title }}
-    </li>
-  </ol>
-</nav>
+  <span class="breadcrumb">
+    <span aria-hidden="true">›</span>
+    <span aria-current="page">{{ page.title }}</span>
+  </span>
+</div>
