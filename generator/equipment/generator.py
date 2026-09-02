@@ -280,8 +280,6 @@ def generate(
             equipment_docs / f"{slug}.md",
             title=title,
             sections=sections,
-            parent="Equipment",
-            parent_path="index.md",
         )
 
         pages.append(
