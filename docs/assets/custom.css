@@ -44,13 +44,11 @@
 }
 
 /** logo **/
+
 .logo {
   cursor: pointer;
   display: block;
-  width: fit-content;
-  margin: 0 auto;
   transform-origin: top center;
-  text-align: left;
 }
 
 .logo::before {
@@ -103,6 +101,7 @@
 }
 
 /** homepage link **/
+
 .markdown-body > h1:first-child a {
   display: inline-block;
   width: 48px;
@@ -116,6 +115,7 @@
 }
 
 /** data groups **/
+
 .data-groups {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
