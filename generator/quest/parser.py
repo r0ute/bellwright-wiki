@@ -32,15 +32,6 @@ def _quest_object(objects: list[dict]) -> dict | None:
     return None
 
 
-def _properties(obj: dict) -> dict:
-    value = obj.get("Properties")
-    return value if isinstance(value, dict) else {}
-
-
-def _property(obj: dict, name: str):
-    return _properties(obj).get(name)
-
-
 def _text(value) -> str:
     if isinstance(value, str):
         return value.strip()
@@ -61,12 +52,11 @@ def _text(value) -> str:
     return ""
 
 
-def _text_property(obj: dict, name: str) -> str:
-    return _text(_property(obj, name))
-
-
 def _description(obj: dict) -> str:
-    properties = _properties(obj)
+    properties = obj.get("Properties")
+
+    if not isinstance(properties, dict):
+        return ""
 
     for key, value in properties.items():
         if key.casefold().endswith("taskdescription"):
@@ -144,7 +134,8 @@ def _float(value, default: float = 0.0) -> float:
 
 
 def _items(obj: dict) -> tuple[QuestItem, ...]:
-    values = _property(obj, "Items")
+    properties = obj.get("Properties")
+    values = properties.get("Items") if isinstance(properties, dict) else None
 
     if not isinstance(values, list):
         return ()
@@ -161,10 +152,7 @@ def _items(obj: dict) -> tuple[QuestItem, ...]:
             continue
 
         min_amount = _int(value.get("MinAmount"))
-        max_amount = _int(
-            value.get("MaxAmount"),
-            min_amount,
-        )
+        max_amount = _int(value.get("MaxAmount"), min_amount)
 
         result.append(
             QuestItem(
@@ -183,10 +171,9 @@ def _reward_name(value) -> str:
     if not name:
         return ""
 
-    words = _split_words(name)
     result = []
 
-    for word in words:
+    for word in _split_words(name):
         if word and word[-1].isdigit():
             split_at = len(word)
 
@@ -247,7 +234,8 @@ def _table_reward(table: dict) -> QuestReward | None:
 
 
 def _rewards(obj: dict) -> tuple[QuestReward, ...]:
-    item_reward = _property(obj, "ItemReward")
+    properties = obj.get("Properties")
+    item_reward = properties.get("ItemReward") if isinstance(properties, dict) else None
 
     if not isinstance(item_reward, dict):
         return ()
@@ -290,7 +278,8 @@ def _rewards(obj: dict) -> tuple[QuestReward, ...]:
 
 
 def _subquests(obj: dict) -> list[tuple[str, str, bool]]:
-    values = _property(obj, "Subquests")
+    properties = obj.get("Properties")
+    values = properties.get("Subquests") if isinstance(properties, dict) else None
 
     if not isinstance(values, list):
         return []
@@ -363,9 +352,7 @@ def _fallback_step_title(
     elif name.startswith(quest_name):
         name = name[len(quest_name) :]
 
-    name = name.lstrip("_")
-
-    return " ".join(_split_words(name)).strip()
+    return " ".join(_split_words(name.lstrip("_"))).strip()
 
 
 def _step_title(
@@ -374,7 +361,8 @@ def _step_title(
     step_name: str,
     step_object: dict,
 ) -> str:
-    title = _text_property(step_object, "Title")
+    properties = step_object.get("Properties")
+    title = _text(properties.get("Title")) if isinstance(properties, dict) else ""
 
     if title and title.casefold() != quest_title.casefold():
         return title
@@ -386,16 +374,26 @@ def _step_title(
 
 
 def _step_npc(step_object: dict) -> str:
-    npc = _npc_name(_property(step_object, "NpcRef"))
+    properties = step_object.get("Properties")
+
+    if not isinstance(properties, dict):
+        return ""
+
+    npc = _npc_name(properties.get("NpcRef"))
 
     if npc:
         return npc
 
-    return _npc_name(_property(step_object, "DefaultQuestGiverRef"))
+    return _npc_name(properties.get("DefaultQuestGiverRef"))
 
 
 def _required_npcs(obj: dict) -> tuple[str, ...]:
-    values = _property(obj, "RequiredNpcsForQuestToBeVisible")
+    properties = obj.get("Properties")
+    values = (
+        properties.get("RequiredNpcsForQuestToBeVisible")
+        if isinstance(properties, dict)
+        else None
+    )
 
     if not isinstance(values, list):
         return ()
@@ -431,6 +429,11 @@ def _resolve_steps(
         if step_object is None:
             continue
 
+        properties = step_object.get("Properties")
+
+        if not isinstance(properties, dict):
+            properties = {}
+
         steps.append(
             QuestStep(
                 name=_step_title(
@@ -441,10 +444,7 @@ def _resolve_steps(
                 ),
                 source=source,
                 summary=_description(step_object),
-                completion_text=_text_property(
-                    step_object,
-                    "CompletionText",
-                ),
+                completion_text=_text(properties.get("CompletionText")),
                 type=quest_type,
                 group_next=group_next,
                 items=_items(step_object),
@@ -463,16 +463,16 @@ def _quest_npcs(
     result = []
 
     for npc in _required_npcs(quest_object):
-        if npc and npc.casefold() != giver.casefold():
-            if npc not in result:
-                result.append(npc)
+        if npc.casefold() != giver.casefold():
+            result.append(npc)
 
     for step in steps:
-        npc = step.npc
-
-        if npc and npc.casefold() != giver.casefold():
-            if npc not in result:
-                result.append(npc)
+        if (
+            step.npc
+            and step.npc.casefold() != giver.casefold()
+            and step.npc not in result
+        ):
+            result.append(step.npc)
 
     return tuple(result)
 
@@ -490,15 +490,16 @@ def parse_quest(
     if quest_object is None:
         return None
 
-    if not isinstance(_property(quest_object, "Subquests"), list):
+    properties = quest_object.get("Properties")
+
+    if not isinstance(properties, dict):
         return None
 
-    name = _usable_object_name(_object_name(quest_object))
+    if not isinstance(properties.get("Subquests"), list):
+        return None
 
-    if not name:
-        name = path.stem
-
-    title = _text_property(quest_object, "Title") or name
+    name = _usable_object_name(_object_name(quest_object)) or path.stem
+    title = _text(properties.get("Title")) or name
 
     steps = _resolve_steps(
         name,
@@ -507,18 +508,22 @@ def parse_quest(
         directory_objects,
     )
 
-    giver = _npc_name(_property(quest_object, "DefaultQuestGiverRef"))
+    giver = _npc_name(properties.get("DefaultQuestGiverRef"))
+
+    parts = relative_path.parts
+    category_index = next(
+        index
+        for index, part in enumerate(parts)
+        if part.casefold() == category.casefold()
+    )
 
     return Quest(
         name=name,
         category=category,
         source=path,
-        relative_path=_relative_tree_path(
-            relative_path,
-            category,
-        ),
+        relative_path=tuple(parts[category_index + 1 : -1]),
         title=title,
-        summary=_text_property(quest_object, "Summary"),
+        summary=_text(properties.get("Summary")),
         giver=giver,
         npcs=_quest_npcs(
             quest_object,
@@ -527,22 +532,7 @@ def parse_quest(
         ),
         steps=steps,
         rewards=_rewards(quest_object),
-        money_reward=_int(_property(quest_object, "MoneyReward")),
-        renown_reward=_int(_property(quest_object, "RenownReward")),
-        village_trust_reward=_int(_property(quest_object, "VillageTrustReward")),
+        money_reward=_int(properties.get("MoneyReward")),
+        renown_reward=_int(properties.get("RenownReward")),
+        village_trust_reward=_int(properties.get("VillageTrustReward")),
     )
-
-
-def _relative_tree_path(
-    relative: Path,
-    category: str,
-) -> tuple[str, ...]:
-    parts = relative.parts
-
-    category_index = next(
-        index
-        for index, part in enumerate(parts)
-        if part.casefold() == category.casefold()
-    )
-
-    return tuple(parts[category_index + 1 : -1])
