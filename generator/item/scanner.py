@@ -8,7 +8,11 @@ from typing import Any
 
 from ..discover import discover_json
 from .category import CategoryIndex
-from .classifier import family_for_path, is_generated_family
+from .classifier import (
+    classify_item_family,
+    family_for_path,
+    is_generated_family,
+)
 from .model import Item
 
 
@@ -92,7 +96,7 @@ def _string_value(value: Any) -> str:
 
 
 def discover_paths(assets_root: Path) -> Iterator[Path]:
-    """Yield JSONs belonging to generated item families."""
+    """Yield JSONs belonging to generated item source families."""
     for path in discover_json(assets_root):
         family = family_for_path(path)
 
@@ -105,7 +109,12 @@ def discover_items(
     category_index: CategoryIndex,
 ) -> Iterator[Item]:
     """
-    Discover actual item CDOs, not every JSON beneath an item family.
+    Discover actual item CDOs and classify them by semantic category.
+
+    The physical Items/<Family>/ directory is only the fallback family.
+    This allows assets stored in special/source buckets such as
+    UniqueQuestItems to be emitted into their actual semantic category,
+    e.g. Equipment.
     """
     for path in discover_paths(assets_root):
         cdo = load_cdo(path)
@@ -120,7 +129,20 @@ def discover_items(
         if not name:
             continue
 
-        family = family_for_path(path)
+        source_family = family_for_path(path)
+
+        if source_family is None:
+            continue
+
+        category = (
+            category_index.get_category(properties.get("Category")) or "Uncategorized"
+        )
+
+        family = classify_item_family(
+            path,
+            category,
+            category_index=category_index,
+        )
 
         if family is None:
             continue
@@ -129,10 +151,7 @@ def discover_items(
             path=path,
             family=family,
             template=superstruct_name(cdo),
-            category=(
-                category_index.get_category(properties.get("Category"))
-                or "Uncategorized"
-            ),
+            category=category,
             name=name,
             properties=properties,
         )
