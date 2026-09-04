@@ -95,6 +95,110 @@ def _string_value(value: Any) -> str:
     return ""
 
 
+def _game_object_path(value: Any) -> str:
+    """Extract a /Game/... object path from an Unreal reference."""
+    if not isinstance(value, dict):
+        return ""
+
+    for key in ("ObjectPath", "AssetPathName", "ObjectName"):
+        reference = value.get(key)
+
+        if not isinstance(reference, str) or not reference:
+            continue
+
+        match = re.search(r"(/Game/[^']+)", reference)
+        if match:
+            return match.group(1)
+
+        match = re.search(r"'([^']+)'", reference)
+        if match:
+            return match.group(1)
+
+        if reference.startswith("/Game/"):
+            return reference
+
+    return ""
+
+
+def _path_from_game_object(
+    assets_root: Path,
+    object_path: str,
+) -> Path | None:
+    """
+    Convert an Unreal /Game/... asset reference into an FModel JSON path.
+
+    Example:
+        /Game/Mist/Data/Items/Fishes/BaseFish.0
+    becomes:
+        <assets_root>/Bellwright/Content/Mist/Data/Items/Fishes/BaseFish.json
+    """
+    if not object_path.startswith("/Game/"):
+        return None
+
+    path = object_path.split(".", 1)[0]
+
+    relative = path.removeprefix("/Game/")
+
+    candidate = assets_root / "Bellwright" / "Content" / f"{relative}.json"
+
+    return candidate if candidate.exists() else None
+
+
+def _category_from_template(
+    path: Path,
+    properties: dict[str, Any],
+    category_index: CategoryIndex,
+    assets_root: Path,
+) -> str | None:
+    """
+    Resolve Category through inherited Unreal item templates.
+
+    Many item subclasses do not repeat inherited properties in their
+    exported CDO. For example, BeardedMullet derives from BaseFish_C,
+    while BaseFish defines Category = Resources.
+
+    Follow Template references until a Category is found.
+    """
+    direct = category_index.get_category(properties.get("Category"))
+
+    if direct:
+        return direct
+
+    current_path = path
+    visited: set[Path] = set()
+
+    while current_path not in visited:
+        visited.add(current_path)
+
+        cdo = load_cdo(current_path)
+
+        current_properties = cdo.get("Properties")
+        if not isinstance(current_properties, dict):
+            return None
+
+        category = category_index.get_category(current_properties.get("Category"))
+        if category:
+            return category
+
+        template = cdo.get("Template")
+        template_path = _game_object_path(template)
+
+        if not template_path:
+            return None
+
+        next_path = _path_from_game_object(
+            assets_root,
+            template_path,
+        )
+
+        if next_path is None:
+            return None
+
+        current_path = next_path
+
+    return None
+
+
 def discover_paths(assets_root: Path) -> Iterator[Path]:
     """Yield JSONs belonging to generated item source families."""
     for path in discover_json(assets_root):
@@ -111,10 +215,18 @@ def discover_items(
     """
     Discover actual item CDOs and classify them by semantic category.
 
-    The physical Items/<Family>/ directory is only the fallback family.
-    This allows assets stored in special/source buckets such as
-    UniqueQuestItems to be emitted into their actual semantic category,
-    e.g. Equipment.
+    Category is resolved from the item's own Properties first, then
+    inherited through its Unreal Template chain. The physical
+    Items/<Family>/ directory remains only the fallback family.
+
+    This is important for subclasses such as:
+
+        Fishes/RaidMap/BeardedMullet.json
+            -> Template BaseFish_C
+            -> BaseFish.json
+            -> Category Resources
+
+    It also handles inherited categories for other item families.
     """
     for path in discover_paths(assets_root):
         cdo = load_cdo(path)
@@ -135,7 +247,13 @@ def discover_items(
             continue
 
         category = (
-            category_index.get_category(properties.get("Category")) or "Uncategorized"
+            _category_from_template(
+                path,
+                properties,
+                category_index,
+                assets_root,
+            )
+            or "Uncategorized"
         )
 
         family = classify_item_family(
