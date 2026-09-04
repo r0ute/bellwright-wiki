@@ -1,7 +1,7 @@
 # Bellwright Wiki & Guide
 
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/r0ute/bellwright-wiki/pages.yml)
-![GitHub last commit](https://img.shields.io/github/last-commit/r0ute/bellwright-wiki)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/r0ute/bw-wiki/pages.yml)
+![GitHub last commit](https://img.shields.io/github/last-commit/r0ute/bw-wiki)
 
 Extracted and generated data from the **Bellwright** game.
 
@@ -15,6 +15,6 @@ Generated documentation mirrors the extracted game category structure and includ
 
 ## Bellwright Wiki & Guides
 
-[View the Bellwright Wiki & Guides](https://r0ute.github.io/bellwright-wiki/)
+[View the Bellwright Wiki & Guides](https://r0ute.github.io/bw-wiki/)
 
 The documentation covers Bellwright game data, including items, quests, NPCs, resources, crafting, and gameplay information.

@@ -59,12 +59,11 @@ def write_index_page(
     """Write the root documentation index."""
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    logo_path = copy_icon(
+    copy_icon(
         logo,
         output.parent / "assets",
     )
 
-    logo_src = logo_path.relative_to(output.parent).as_posix()
     version = (
         (output.parent.parent / "assets" / "version")
         .read_text(encoding="utf-8")
@@ -86,7 +85,7 @@ def write_index_page(
         "",
         f"![Game Version](https://img.shields.io/badge/Game%20Version-{version}-black?logo=unrealengine)",
         "[![GitHub](https://img.shields.io/badge/Source%20Code-GitHub-black?logo=github)]"
-        "(https://github.com/r0ute/bw-data)",
+        "(https://github.com/r0ute/bw-wiki)",
         "",
         *_render_data(page_groups),
     ]
