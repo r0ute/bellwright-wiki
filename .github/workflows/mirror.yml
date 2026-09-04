@@ -20,5 +20,5 @@ jobs:
         env:
           MIRROR_TOKEN: ${{ secrets.BW_MIRROR_ACCESS }}
         run: |
-          git clone --mirror "https://x-access-token:${MIRROR_TOKEN}@GitHub.com/r0ute/bellwright-wiki.git" mirror
-          git -C mirror push --mirror "https://x-access-token:${MIRROR_TOKEN}@GitHub.com/bellwright-wiki/bellwright-wiki.github.io.git"
+          git clone --branch master --single-branch "https://x-access-token:${MIRROR_TOKEN}@GitHub.com/r0ute/bellwright-wiki.git" mirror
+          git -C mirror push "https://x-access-token:${MIRROR_TOKEN}@GitHub.com/bellwright-wiki/bellwright-wiki.github.io.git" master:master
