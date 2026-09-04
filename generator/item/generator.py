@@ -141,9 +141,6 @@ def _rows(
 
     field_sets = [_fields_for(item) for item in items]
 
-    # Schema modules own their complete field sets. The generator only
-    # preserves first-seen schema order when a section contains more than
-    # one schema variant (for example, Resources by template).
     headers: list[str] = []
     for fields in field_sets:
         for name in fields:
