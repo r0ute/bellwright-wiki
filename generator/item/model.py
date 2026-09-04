@@ -15,6 +15,7 @@ class Item:
     category: str
     name: str
     properties: dict[str, Any] = field(default_factory=dict)
+
     damaged_item: str = ""
     unbroken_parent: str = ""
 

@@ -18,27 +18,48 @@ FAMILY_NAMES = {
     "ItemGroups",
 }
 
+GENERATED_FAMILIES = {
+    "Equipment",
+    "Resources",
+    "UniqueQuestItems",
+    "PlaceableDecorations",
+    "Special",
+    "UniqueQuestItemsRaidMap",
+    "Fishes",
+    "Healing",
+}
+
+SUPPORTING_FAMILIES = {
+    "BrokenItems",
+    "KnowledgeBooks",
+    "Loot",
+    "Categories",
+    "ItemGroups",
+}
+
 
 def family_for_path(path: Path) -> str | None:
     """Return the top-level Items family for a JSON path."""
     parts = path.parts
     lowered = [part.lower() for part in parts]
+
     try:
         index = lowered.index("items")
     except ValueError:
         return None
+
     if index + 1 >= len(parts):
         return None
+
     raw_family = parts[index + 1]
     lookup = {name.lower(): name for name in FAMILY_NAMES}
+
     return lookup.get(raw_family.lower())
 
 
+def is_generated_family(family: str | None) -> bool:
+    return family in GENERATED_FAMILIES
+
+
 def is_supporting_family(family: str | None) -> bool:
-    return family in {
-        "BrokenItems",
-        "KnowledgeBooks",
-        "Loot",
-        "Categories",
-        "ItemGroups",
-    }
+    return family in SUPPORTING_FAMILIES

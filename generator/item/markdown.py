@@ -9,55 +9,120 @@ from ..navigation import breadcrumb_include, navigation_metadata
 def markdown_value(value: object) -> str:
     if value is None:
         return ""
+
     return str(value).replace("|", r"\|").replace("\n", " ")
 
 
-def render_table(rows: list[dict], headers: list[str]) -> list[str]:
+def render_table(
+    rows: list[dict],
+    headers: list[str],
+) -> list[str]:
     if not headers:
         return []
+
     lines = [
         "| " + " | ".join(headers) + " |",
         "| " + " | ".join(["---"] * len(headers)) + " |",
     ]
+
     for row in rows:
         lines.append(
             "| "
             + " | ".join(markdown_value(row.get(header, "")) for header in headers)
             + " |"
         )
+
     return lines
 
 
 def render_page(
     title: str,
+    rows: list[dict] | None = None,
+    headers: list[str] | None = None,
     sections: dict[str, tuple[list[str], list[dict]]] | None = None,
+    links: list[tuple[str, str]] | None = None,
+    parent: str | None = None,
+    parent_path: str | None = None,
+    grand_parent: str | None = None,
+    grand_parent_path: str | None = None,
 ) -> str:
+    headers = headers or []
+
     lines = [
         "---",
         "layout: default",
         f"title: {json.dumps(title)}",
+        *navigation_metadata(
+            parent=parent,
+            parent_path=parent_path,
+            grand_parent=grand_parent,
+            grand_parent_path=grand_parent_path,
+        ),
         "---",
         "",
         *breadcrumb_include(),
         f"# {title}",
         "",
     ]
-    for section_name, (headers, rows) in (sections or {}).items():
-        if not headers:
-            continue
-        lines.extend([f"## {section_name}", ""])
-        lines.extend(render_table(rows, headers))
+
+    if links:
+        for link_title, link_target in links:
+            lines.append(f"- [{link_title}]({link_target})")
+
         lines.append("")
+
+    if sections:
+        for section_name, section_content in sections.items():
+            section_headers, section_rows = section_content
+
+            if not section_headers:
+                continue
+
+            lines.extend(
+                [
+                    f"## {section_name}",
+                    "",
+                ]
+            )
+
+            lines.extend(
+                render_table(
+                    section_rows,
+                    section_headers,
+                )
+            )
+
+            lines.append("")
+
+    elif rows is not None and headers:
+        lines.extend(
+            render_table(
+                rows,
+                headers,
+            )
+        )
+        lines.append("")
+
     return "\n".join(lines)
 
 
 def write_page(
     output: Path,
     title: str,
-    sections: dict[str, tuple[list[str], list[dict]]],
+    rows: list[dict] | None = None,
+    headers: list[str] | None = None,
+    sections: dict[str, tuple[list[str], list[dict]]] | None = None,
+    links: list[tuple[str, str]] | None = None,
 ) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
+
     output.write_text(
-        render_page(title, sections),
+        render_page(
+            title=title,
+            rows=rows,
+            headers=headers,
+            sections=sections,
+            links=links,
+        ),
         encoding="utf-8",
     )
