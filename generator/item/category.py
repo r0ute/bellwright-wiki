@@ -10,6 +10,8 @@ from ..discover import discover_json
 CATEGORY_CLASSES = {
     "MistItemCategory",
     "MistItemCategory_C",
+    "MistItemCategoryGroup",
+    "MistItemCategoryGroup_C",
 }
 
 CATEGORY_GROUP_CLASSES = {
