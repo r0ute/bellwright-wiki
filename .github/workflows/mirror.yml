@@ -7,7 +7,7 @@ on:
 
 jobs:
   mirror:
-    if: not contains(github.repository, 'github.io')
+    if: "!contains(github.repository, 'github.io')"
     runs-on: ubuntu-latest
 
     steps:
