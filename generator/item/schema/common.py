@@ -62,6 +62,7 @@ def field(
             return transform(properties.get(key))
         value = extract_value(properties, key)
         return fallback if value is None else value
+
     return _extract
 
 

@@ -1,5 +1,13 @@
 from __future__ import annotations
-from .common import FieldExtractor, asset_reference_name, context_field, field, nested_field, tier
+
+from .common import (
+    FieldExtractor,
+    asset_reference_name,
+    context_field,
+    field,
+    nested_field,
+    tier,
+)
 
 EQUIPMENT_FIELDS: dict[str, FieldExtractor] = {
     "Icon": context_field("icon"),

@@ -33,8 +33,7 @@ def main() -> None:
     )
 
     page_groups = [
-        generator(ASSETS, DOCS, ICON_OUT, icon_index)
-        for generator in generators
+        generator(ASSETS, DOCS, ICON_OUT, icon_index) for generator in generators
     ]
 
     renderer.write_index_page(

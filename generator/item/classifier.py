@@ -36,5 +36,9 @@ def family_for_path(path: Path) -> str | None:
 
 def is_supporting_family(family: str | None) -> bool:
     return family in {
-        "BrokenItems", "KnowledgeBooks", "Loot", "Categories", "ItemGroups"
+        "BrokenItems",
+        "KnowledgeBooks",
+        "Loot",
+        "Categories",
+        "ItemGroups",
     }

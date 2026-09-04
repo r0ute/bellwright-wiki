@@ -43,27 +43,22 @@ def _load_module(module_name: str):
 
 def _equipment_schema(category_title: str):
     slug = category.CategoryIndex.slug(category_title)
-    return (
-        _load_module(f"generator.item.schema.equipment.{slug}")
-        or _load_module("generator.item.schema.equipment.default")
+    return _load_module(f"generator.item.schema.equipment.{slug}") or _load_module(
+        "generator.item.schema.equipment.default"
     )
 
 
 def _resource_schema(template: str):
     slug = RESOURCE_SCHEMAS.get(template, "resource")
-    return (
-        _load_module(f"generator.item.schema.resources.{slug}")
-        or _load_module("generator.item.schema.resources.resource")
+    return _load_module(f"generator.item.schema.resources.{slug}") or _load_module(
+        "generator.item.schema.resources.resource"
     )
 
 
 def _fields_for(item: Item) -> dict[str, FieldExtractor]:
     if item.family == "Equipment":
         schema = _equipment_schema(item.category)
-        specialized = (
-            getattr(schema, "EQUIPMENT_FIELDS", {})
-            if schema else {}
-        )
+        specialized = getattr(schema, "EQUIPMENT_FIELDS", {}) if schema else {}
     elif item.family == "Resources":
         schema = _resource_schema(item.template)
         specialized = getattr(schema, "FIELDS", {}) if schema else {}
@@ -102,9 +97,9 @@ def _relationship_maps(
 ) -> tuple[dict[str, str], dict[str, str]]:
     by_parent: dict[str, str] = {}
     by_broken: dict[str, str] = {}
-    for broken_asset, (damaged, parent) in (
-        scanner.load_broken_relationships(assets).items()
-    ):
+    for broken_asset, (damaged, parent) in scanner.load_broken_relationships(
+        assets
+    ).items():
         damaged = damaged or broken_asset
         if parent:
             by_parent[parent] = damaged
@@ -164,18 +159,15 @@ def _equipment_sections(
     for title in groups:
         scope = category_index.scope(title)
         group_items = [
-            item for item in items
+            item
+            for item in items
             if category.normalize_category_key(item.category) in scope
         ]
         if group_items:
-            sections[title] = _rows(
-                group_items, icon_index, icon_out
-            )
+            sections[title] = _rows(group_items, icon_index, icon_out)
 
     if not sections and items:
-        sections["Uncategorized"] = _rows(
-            items, icon_index, icon_out
-        )
+        sections["Uncategorized"] = _rows(items, icon_index, icon_out)
     return sections
 
 
@@ -193,15 +185,13 @@ def _resource_sections(
     }
     groups: dict[str, list[Item]] = defaultdict(list)
     for item in items:
-        groups[
-            template_titles.get(item.template, item.template or "Other")
-        ].append(item)
+        groups[template_titles.get(item.template, item.template or "Other")].append(
+            item
+        )
 
     return {
         title: _rows(group, icon_index, icon_out)
-        for title, group in sorted(
-            groups.items(), key=lambda pair: pair[0].lower()
-        )
+        for title, group in sorted(groups.items(), key=lambda pair: pair[0].lower())
     }
 
 
@@ -216,9 +206,7 @@ def _family_sections(
 
     return {
         title: _rows(group, icon_index, icon_out)
-        for title, group in sorted(
-            groups.items(), key=lambda pair: pair[0].lower()
-        )
+        for title, group in sorted(groups.items(), key=lambda pair: pair[0].lower())
     }
 
 
@@ -248,30 +236,22 @@ def generate(
                 family_items, category_index, icon_index, icon_out
             )
         elif family == "Resources":
-            sections = _resource_sections(
-                family_items, icon_index, icon_out
-            )
+            sections = _resource_sections(family_items, icon_index, icon_out)
         else:
-            sections = _family_sections(
-                family_items, icon_index, icon_out
-            )
+            sections = _family_sections(family_items, icon_index, icon_out)
 
         slug = category.CategoryIndex.slug(title)
         output = docs / "items" / f"{slug}.md"
-        markdown.write_page(
-            output, title=title, sections=sections
+        markdown.write_page(output, title=title, sections=sections)
+        pages.append(
+            {
+                "title": title,
+                "slug": f"items/{slug}",
+            }
         )
-        pages.append({
-            "title": title,
-            "slug": f"items/{slug}",
-        })
 
-        total = sum(
-            len(rows) for _, rows in sections.values()
-        )
-        print(
-            f"\tGENERATED items/{slug}.md ({total} items)"
-        )
+        total = sum(len(rows) for _, rows in sections.values())
+        print(f"\tGENERATED items/{slug}.md ({total} items)")
 
     print(f"Item definitions discovered: {len(items)}")
     return {"title": TITLE, "pages": pages}

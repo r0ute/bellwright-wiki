@@ -38,9 +38,9 @@ def find_cdo(objects: list[dict]) -> dict | None:
     """Return the first object containing a Properties mapping."""
     return next(
         (
-            obj for obj in objects
-            if isinstance(obj, dict)
-            and isinstance(obj.get("Properties"), dict)
+            obj
+            for obj in objects
+            if isinstance(obj, dict) and isinstance(obj.get("Properties"), dict)
         ),
         None,
     )
@@ -78,8 +78,12 @@ def _string_value(value: Any) -> str:
         return value.strip()
     if isinstance(value, dict):
         for key in (
-            "LocalizedString", "SourceString", "Value",
-            "ObjectName", "AssetPathName", "ObjectPath",
+            "LocalizedString",
+            "SourceString",
+            "Value",
+            "ObjectName",
+            "AssetPathName",
+            "ObjectPath",
         ):
             candidate = value.get(key)
             if isinstance(candidate, str) and candidate.strip():

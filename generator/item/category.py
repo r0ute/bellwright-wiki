@@ -81,14 +81,20 @@ def _is_under(path: Path, root: Path) -> bool:
 
 def _category_paths(assets_root: Path) -> list[Path]:
     root = (
-        assets_root / "Bellwright" / "Content" / "Mist" / "Data"
-        / "Items" / "Categories"
+        assets_root
+        / "Bellwright"
+        / "Content"
+        / "Mist"
+        / "Data"
+        / "Items"
+        / "Categories"
     )
     if not root.exists():
         return []
     return sorted(
         (
-            path for path in discover_json(assets_root)
+            path
+            for path in discover_json(assets_root)
             if _is_under(path, root)
             and any(
                 _superstruct_name(obj) in CATEGORY_CLASSES
@@ -138,9 +144,7 @@ class CategoryIndex:
                 properties = obj.get("Properties")
                 if isinstance(properties, dict):
                     parent = category_key_from_ref(properties.get("Parent"))
-                    parents[key] = (
-                        normalize_category_key(parent) if parent else None
-                    )
+                    parents[key] = normalize_category_key(parent) if parent else None
 
         children = {key: set() for key in titles}
         for key, parent in parents.items():
@@ -189,10 +193,7 @@ class CategoryIndex:
 
     @staticmethod
     def slug(title: str) -> str:
-        return (
-            re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
-            or "category"
-        )
+        return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-") or "category"
 
 
 def build_category_index(assets_root: Path) -> CategoryIndex:
