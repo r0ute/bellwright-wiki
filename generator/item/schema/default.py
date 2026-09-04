@@ -1,0 +1,4 @@
+from .common import BASE_FIELDS
+
+FIELDS = BASE_FIELDS
+ITEM_FIELDS = FIELDS
