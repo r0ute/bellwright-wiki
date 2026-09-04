@@ -84,9 +84,8 @@ def write_index_page(
         "and other game data.",
         "",
         f"![Game Version](https://img.shields.io/badge/Game%20Version-{version}-black?logo=unrealengine)",
-        "[![GitHub](https://img.shields.io/badge/Source%20Code-GitHub-black?logo=github)]"
-        "(https://github.com/r0ute/bw-wiki)",
-        "",
+        "[![GitHub](https://img.shields.io/badge/Source%20Code-GitHub-black?logo=github)](https://github.com/r0ute/bw-wiki)",
+        "![Beta](https://img.shields.io/badge/Status-Beta-orange)",
         *_render_data(page_groups),
     ]
 
