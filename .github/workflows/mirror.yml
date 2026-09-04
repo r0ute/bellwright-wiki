@@ -16,6 +16,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Push master to PROD
+      - name: Push master to org
+        env:
+          MIRROR_TOKEN: ${{ secrets.BW_MIRROR_ACCESS }}
         run: |
-          git push https://x-access-token:${{ secrets.BW_MIRROR_ACCESS }}@github.com/bellwright-wiki/bellwright-wiki.github.io.git HEAD:master
+          git clone --mirror "https://x-access-token:${MIRROR_TOKEN}@GitHub.com/r0ute/bellwright-wiki.git" mirror
+          git -C mirror push --mirror "https://x-access-token:${MIRROR_TOKEN}@GitHub.com/bellwright-wiki/bellwright-wiki.github.io.git"
