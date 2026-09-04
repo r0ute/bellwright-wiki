@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from ..common import FieldExtractor, asset_reference_name, context_field, enum_value, field, tier
+from ..common import (
+    FieldExtractor,
+    asset_reference_name,
+    context_field,
+    enum_value,
+    field,
+    tier,
+)
 
 FIELDS: dict[str, FieldExtractor] = {
     "Icon": context_field("icon"),
