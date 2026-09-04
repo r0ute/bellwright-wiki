@@ -8,7 +8,7 @@ from typing import Any
 from .. import icon
 from . import category, markdown, scanner
 from .model import Item
-from .schema.common import BASE_FIELDS, FieldExtractor
+from .schema.common import FieldExtractor
 
 TITLE = "Items"
 
@@ -31,6 +31,15 @@ FAMILY_TITLES = {
     "Healing": "Healing",
 }
 
+FAMILY_SCHEMAS = {
+    "UniqueQuestItems": "unique_quest_items",
+    "PlaceableDecorations": "placeable_decorations",
+    "Special": "special",
+    "UniqueQuestItemsRaidMap": "unique_quest_items_raid_map",
+    "Fishes": "fishes",
+    "Healing": "healing",
+}
+
 
 def _load_module(module_name: str):
     try:
@@ -41,49 +50,31 @@ def _load_module(module_name: str):
         return None
 
 
-def _equipment_schema(category_title: str):
-    slug = category.CategoryIndex.slug(category_title)
+def _schema_for(item: Item):
+    if item.family == "Equipment":
+        slug = category.CategoryIndex.slug(item.category)
+        return _load_module(f"generator.item.schema.equipment.{slug}") or _load_module(
+            "generator.item.schema.equipment.default"
+        )
 
-    return _load_module(f"generator.item.schema.equipment.{slug}") or _load_module(
-        "generator.item.schema.equipment.default"
-    )
+    if item.family == "Resources":
+        slug = RESOURCE_SCHEMAS.get(item.template, "resource")
+        return _load_module(f"generator.item.schema.resources.{slug}") or _load_module(
+            "generator.item.schema.resources.resource"
+        )
 
+    module_name = FAMILY_SCHEMAS.get(item.family)
+    if module_name:
+        return _load_module(f"generator.item.schema.{module_name}")
 
-def _resource_schema(template: str):
-    slug = RESOURCE_SCHEMAS.get(template, "resource")
-
-    return _load_module(f"generator.item.schema.resources.{slug}") or _load_module(
-        "generator.item.schema.resources.resource"
-    )
+    return _load_module("generator.item.schema.default")
 
 
 def _fields_for(item: Item) -> dict[str, FieldExtractor]:
-    """
-    Return the complete field set for an item.
-
-    Every item starts with BASE_FIELDS. Specialized equipment/resource
-    fields are then layered on top. This guarantees that every returned
-    mapping is a field-extractor mapping and avoids trying to iterate
-    over None when a specialized schema is unavailable.
-    """
-    specialized: dict[str, FieldExtractor] = {}
-
-    if item.family == "Equipment":
-        schema = _equipment_schema(item.category)
-
-        if schema is not None:
-            specialized = getattr(schema, "EQUIPMENT_FIELDS", {})
-
-    elif item.family == "Resources":
-        schema = _resource_schema(item.template)
-
-        if schema is not None:
-            specialized = getattr(schema, "FIELDS", {})
-
-    merged = dict(BASE_FIELDS)
-    merged.update(specialized)
-
-    return merged
+    schema = _schema_for(item)
+    if schema is None:
+        return {}
+    return dict(getattr(schema, "FIELDS", {}))
 
 
 def _item_context(
@@ -97,6 +88,8 @@ def _item_context(
         "template": item.template,
         "category": item.category,
         "icon": "",
+        "damaged_item": item.damaged_item,
+        "unbroken_parent": item.unbroken_parent,
     }
 
     icon_path = icon.find_icon(item.properties, icon_index)
@@ -148,35 +141,27 @@ def _rows(
 
     field_sets = [_fields_for(item) for item in items]
 
-    headers = list(BASE_FIELDS)
-
+    # Schema modules own their complete field sets. The generator only
+    # preserves first-seen schema order when a section contains more than
+    # one schema variant (for example, Resources by template).
+    headers: list[str] = []
     for fields in field_sets:
         for name in fields:
             if name not in headers:
                 headers.append(name)
 
-    if any(item.damaged_item for item in items):
-        if "Broken Version" not in headers:
-            headers.append("Broken Version")
-
     rows: list[dict[str, Any]] = []
 
     for item, fields in zip(items, field_sets):
         context = _item_context(item, icon_index, icon_out)
+        rows.append(
+            {
+                name: extractor(item.properties, context)
+                for name, extractor in fields.items()
+            }
+        )
 
-        row = {
-            name: extractor(item.properties, context)
-            for name, extractor in fields.items()
-        }
-
-        if "Broken Version" in headers:
-            row["Broken Version"] = item.damaged_item
-
-        rows.append(row)
-
-    rows.sort(
-        key=lambda row: str(row.get("Name", "")).lower(),
-    )
+    rows.sort(key=lambda row: str(row.get("Name", "")).lower())
 
     return headers, rows
 
@@ -188,31 +173,20 @@ def _equipment_sections(
     icon_out: Path,
 ):
     sections: dict[str, tuple[list[str], list[dict]]] = {}
-
     groups = category_index.child_titles("Equipment") or ["Equipment"]
 
     for title in groups:
         scope = category_index.scope(title)
-
         group_items = [
             item
             for item in items
             if category.normalize_category_key(item.category) in scope
         ]
-
         if group_items:
-            sections[title] = _rows(
-                group_items,
-                icon_index,
-                icon_out,
-            )
+            sections[title] = _rows(group_items, icon_index, icon_out)
 
     if not sections and items:
-        sections["Uncategorized"] = _rows(
-            items,
-            icon_index,
-            icon_out,
-        )
+        sections["Uncategorized"] = _rows(items, icon_index, icon_out)
 
     return sections
 
@@ -231,20 +205,13 @@ def _resource_sections(
     }
 
     groups: dict[str, list[Item]] = defaultdict(list)
-
     for item in items:
-        title = template_titles.get(
-            item.template,
-            item.template or "Other",
-        )
+        title = template_titles.get(item.template, item.template or "Other")
         groups[title].append(item)
 
     return {
         title: _rows(group, icon_index, icon_out)
-        for title, group in sorted(
-            groups.items(),
-            key=lambda pair: pair[0].lower(),
-        )
+        for title, group in sorted(groups.items(), key=lambda pair: pair[0].lower())
     }
 
 
@@ -254,16 +221,12 @@ def _family_sections(
     icon_out: Path,
 ):
     groups: dict[str, list[Item]] = defaultdict(list)
-
     for item in items:
         groups[item.category or "Uncategorized"].append(item)
 
     return {
         title: _rows(group, icon_index, icon_out)
-        for title, group in sorted(
-            groups.items(),
-            key=lambda pair: pair[0].lower(),
-        )
+        for title, group in sorted(groups.items(), key=lambda pair: pair[0].lower())
     }
 
 
@@ -274,74 +237,36 @@ def generate(
     icon_index: dict[str, Path],
 ) -> dict:
     """Generate all supported item families from Items/."""
-
     category_index = category.build_category_index(assets)
-
-    items = list(
-        scanner.discover_items(
-            assets,
-            category_index,
-        )
-    )
-
+    items = list(scanner.discover_items(assets, category_index))
     _apply_relationships(items, assets)
 
     by_family: dict[str, list[Item]] = defaultdict(list)
-
     for item in items:
         by_family[item.family].append(item)
 
     pages = []
-
     for family, title in FAMILY_TITLES.items():
         family_items = by_family.get(family, [])
-
         if not family_items:
             continue
 
         if family == "Equipment":
             sections = _equipment_sections(
-                family_items,
-                category_index,
-                icon_index,
-                icon_out,
+                family_items, category_index, icon_index, icon_out
             )
         elif family == "Resources":
-            sections = _resource_sections(
-                family_items,
-                icon_index,
-                icon_out,
-            )
+            sections = _resource_sections(family_items, icon_index, icon_out)
         else:
-            sections = _family_sections(
-                family_items,
-                icon_index,
-                icon_out,
-            )
+            sections = _family_sections(family_items, icon_index, icon_out)
 
         slug = category.CategoryIndex.slug(title)
         output = docs / "items" / f"{slug}.md"
-
-        markdown.write_page(
-            output,
-            title=title,
-            sections=sections,
-        )
-
-        pages.append(
-            {
-                "title": title,
-                "slug": f"items/{slug}",
-            }
-        )
+        markdown.write_page(output, title=title, sections=sections)
+        pages.append({"title": title, "slug": f"items/{slug}"})
 
         total = sum(len(rows) for _, rows in sections.values())
-
         print(f"\tGENERATED items/{slug}.md ({total} items)")
 
     print(f"Item definitions discovered: {len(items)}")
-
-    return {
-        "title": TITLE,
-        "pages": pages,
-    }
+    return {"title": TITLE, "pages": pages}

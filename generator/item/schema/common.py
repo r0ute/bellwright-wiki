@@ -4,7 +4,9 @@ from collections.abc import Callable
 from typing import Any
 
 FieldExtractor = Callable[[dict[str, Any], dict[str, Any]], Any]
+ValueTransformer = Callable[[Any], Any]
 
+ASSET_REFERENCE_KEYS = ("ObjectPath", "AssetPathName", "ObjectName")
 VALUE_KEYS = (
     "LocalizedString",
     "SourceString",
@@ -29,11 +31,7 @@ def extract_value(properties: dict[str, Any], key: str) -> Any:
 def asset_reference_name(value: Any) -> str:
     if isinstance(value, dict):
         value = next(
-            (
-                value.get(k)
-                for k in ("ObjectPath", "AssetPathName", "ObjectName")
-                if value.get(k)
-            ),
+            (value.get(key) for key in ASSET_REFERENCE_KEYS if value.get(key)),
             None,
         )
     if not isinstance(value, str) or not value:
@@ -49,18 +47,46 @@ def enum_value(value: Any) -> str:
     return value.rsplit("::", 1)[-1] if isinstance(value, str) else ""
 
 
+def required_skill_value(requirements: Any) -> str:
+    if not isinstance(requirements, list):
+        return ""
+    values = [
+        f"{skill}: {value}"
+        for requirement in requirements
+        if isinstance(requirement, dict)
+        for skill, value in [
+            (
+                str(requirement.get("Key", "")).rsplit("::", 1)[-1],
+                requirement.get("Value"),
+            )
+        ]
+        if skill and value is not None
+    ]
+    return ", ".join(values)
+
+
 def field(
     key: str,
     fallback: str = "",
-    transform: Callable[[Any], Any] | None = None,
+    transform: ValueTransformer | None = None,
 ) -> FieldExtractor:
-    def _extract(
-        properties: dict[str, Any],
-        _context: dict[str, Any],
-    ) -> Any:
+    def _extract(properties: dict[str, Any], _context: dict[str, Any]) -> Any:
+        value = properties.get(key)
         if transform:
-            return transform(properties.get(key))
+            return transform(value)
         value = extract_value(properties, key)
+        return fallback if value is None else value
+
+    return _extract
+
+
+def nested_field(*keys: str, fallback: str = "") -> FieldExtractor:
+    def _extract(properties: dict[str, Any], _context: dict[str, Any]) -> Any:
+        value: Any = properties
+        for key in keys:
+            if not isinstance(value, dict):
+                return fallback
+            value = value.get(key)
         return fallback if value is None else value
 
     return _extract
@@ -79,17 +105,3 @@ def tier(properties: dict[str, Any], context: dict[str, Any]) -> Any:
         if part.startswith("Tier") and part[4:].isdigit():
             return int(part[4:])
     return ""
-
-
-BASE_FIELDS: dict[str, FieldExtractor] = {
-    "Icon": context_field("icon"),
-    "Name": field("Name"),
-    "Description": field("Description"),
-    "Category": context_field("category"),
-    "Rarity": field("Rarity", transform=asset_reference_name),
-    "Tier": tier,
-    "Max Stack Size": field("MaxStackSize"),
-    "Expected Price": field("ExpectedPrice"),
-    "Acquisition Hint": field("AcquisitionHint"),
-    "Crafting XP": field("ExperienceRewardCrafting"),
-}
