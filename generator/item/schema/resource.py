@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from ..common import FieldExtractor, asset_reference_name, context_field, field, tier
+from .common import FieldExtractor, asset_reference_name, context_field, field, tier
 
 FIELDS: dict[str, FieldExtractor] = {
     "Icon": context_field("icon"),
@@ -13,10 +11,4 @@ FIELDS: dict[str, FieldExtractor] = {
     "Expected Price": field("ExpectedPrice"),
     "Acquisition Hint": field("AcquisitionHint"),
     "Crafting XP": field("ExperienceRewardCrafting"),
-    "Damage Type": field("DamageType", transform=asset_reference_name),
-    "Damage": field("Damage"),
-    "Speed": field("WeaponSpeed"),
-    "Length": field("WeaponLength"),
-    "Broken Version": context_field("damaged_item"),
 }
-EQUIPMENT_FIELDS = FIELDS

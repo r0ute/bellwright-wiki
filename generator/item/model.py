@@ -7,15 +7,15 @@ from typing import Any
 
 @dataclass(slots=True)
 class Item:
-    """Normalized item definition used by the item generator."""
-
     path: Path
-    family: str
+    source_family: str
     template: str
+    category_key: str
     category: str
+    category_group_key: str | None
+    category_group: str | None
     name: str
     properties: dict[str, Any] = field(default_factory=dict)
-
     damaged_item: str = ""
     unbroken_parent: str = ""
 

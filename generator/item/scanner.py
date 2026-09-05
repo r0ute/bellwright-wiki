@@ -8,78 +8,38 @@ from typing import Any
 
 from ..discover import discover_json
 from .category import CategoryIndex
-from .classifier import (
-    classify_item_family,
-    family_for_path,
-    is_generated_family,
-)
+from .classifier import source_family
 from .model import Item
 
 
-def load_objects(path: Path) -> list[dict]:
-    """Load FModel JSON as a list of objects."""
+def load_objects(path: Path) -> list[dict[str, Any]]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return []
-
     if isinstance(raw, list):
-        return [obj for obj in raw if isinstance(obj, dict)]
-
+        return [x for x in raw if isinstance(x, dict)]
     return [raw] if isinstance(raw, dict) else []
 
 
-def find_cdo(objects: list[dict]) -> dict | None:
-    """Return the first object containing a Properties mapping."""
-    return next(
-        (
-            obj
-            for obj in objects
-            if isinstance(obj, dict) and isinstance(obj.get("Properties"), dict)
-        ),
-        None,
-    )
+def find_cdo(objects: list[dict[str, Any]]) -> dict[str, Any] | None:
+    return next((o for o in objects if isinstance(o.get("Properties"), dict)), None)
 
 
-def load_cdo(path: Path) -> dict:
+def load_cdo(path: Path) -> dict[str, Any]:
     return find_cdo(load_objects(path)) or {}
 
 
 def load_properties(path: Path) -> dict[str, Any]:
-    cdo = load_cdo(path)
-    properties = cdo.get("Properties")
-
-    return properties if isinstance(properties, dict) else {}
+    p = load_cdo(path).get("Properties")
+    return p if isinstance(p, dict) else {}
 
 
-def superstruct_name(cdo: dict) -> str:
-    """Return the Unreal template class name from SuperStruct."""
-    value = cdo.get("SuperStruct")
-
-    if isinstance(value, dict):
-        value = (
-            value.get("ObjectName")
-            or value.get("AssetPathName")
-            or value.get("ObjectPath")
-        )
-
-    if not isinstance(value, str):
-        return ""
-
-    match = re.search(r"'([^']+)'", value)
-    value = match.group(1) if match else value
-
-    value = value.rsplit("/", 1)[-1].split(".", 1)[0]
-
-    return value.removesuffix("_C")
-
-
-def _string_value(value: Any) -> str:
+def string_value(value: Any) -> str:
     if isinstance(value, str):
         return value.strip()
-
     if isinstance(value, dict):
-        for key in (
+        for k in (
             "LocalizedString",
             "SourceString",
             "Value",
@@ -87,238 +47,137 @@ def _string_value(value: Any) -> str:
             "AssetPathName",
             "ObjectPath",
         ):
-            candidate = value.get(key)
-
-            if isinstance(candidate, str) and candidate.strip():
-                return candidate.strip()
-
+            v = value.get(k)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
     return ""
 
 
-def _game_object_path(value: Any) -> str:
-    """Extract a /Game/... object path from an Unreal reference."""
+def game_path(value: Any) -> str:
     if not isinstance(value, dict):
         return ""
-
-    for key in ("ObjectPath", "AssetPathName", "ObjectName"):
-        reference = value.get(key)
-
-        if not isinstance(reference, str) or not reference:
+    for k in ("ObjectPath", "AssetPathName", "ObjectName"):
+        v = value.get(k)
+        if not isinstance(v, str) or not v:
             continue
-
-        match = re.search(r"(/Game/[^']+)", reference)
-        if match:
-            return match.group(1)
-
-        match = re.search(r"'([^']+)'", reference)
-        if match:
-            return match.group(1)
-
-        if reference.startswith("/Game/"):
-            return reference
-
+        m = re.search(r"(/Game/[^']+)", v)
+        if m:
+            return m.group(1)
+        m = re.search(r"'([^']+)'", v)
+        if m:
+            return m.group(1)
+        if v.startswith("/Game/"):
+            return v
     return ""
 
 
-def _path_from_game_object(
-    assets_root: Path,
-    object_path: str,
-) -> Path | None:
-    """
-    Convert an Unreal /Game/... asset reference into an FModel JSON path.
-
-    Example:
-        /Game/Mist/Data/Items/Fishes/BaseFish.0
-    becomes:
-        <assets_root>/Bellwright/Content/Mist/Data/Items/Fishes/BaseFish.json
-    """
+def path_from_game_object(assets_root: Path, object_path: str) -> Path | None:
     if not object_path.startswith("/Game/"):
         return None
-
-    path = object_path.split(".", 1)[0]
-
-    relative = path.removeprefix("/Game/")
-
-    candidate = assets_root / "Bellwright" / "Content" / f"{relative}.json"
-
-    return candidate if candidate.exists() else None
+    rel = object_path.removeprefix("/Game/").split(".", 1)[0]
+    p = assets_root / "Bellwright" / "Content" / (rel + ".json")
+    return p if p.exists() else None
 
 
-def _category_from_template(
-    path: Path,
-    properties: dict[str, Any],
-    category_index: CategoryIndex,
-    assets_root: Path,
-) -> str | None:
-    """
-    Resolve Category through inherited Unreal item templates.
-
-    Many item subclasses do not repeat inherited properties in their
-    exported CDO. For example, BeardedMullet derives from BaseFish_C,
-    while BaseFish defines Category = Resources.
-
-    Follow Template references until a Category is found.
-    """
-    direct = category_index.get_category(properties.get("Category"))
-
-    if direct:
-        return direct
-
-    current_path = path
-    visited: set[Path] = set()
-
-    while current_path not in visited:
-        visited.add(current_path)
-
-        cdo = load_cdo(current_path)
-
-        current_properties = cdo.get("Properties")
-        if not isinstance(current_properties, dict):
+def template_category(
+    path: Path, props: dict[str, Any], index: CategoryIndex, assets_root: Path
+):
+    node = index.category_for_ref(props.get("Category"))
+    if node:
+        return node
+    current = path
+    seen = set()
+    while current not in seen:
+        seen.add(current)
+        cdo = load_cdo(current)
+        cp = cdo.get("Properties")
+        if not isinstance(cp, dict):
             return None
-
-        category = category_index.get_category(current_properties.get("Category"))
-        if category:
-            return category
-
-        template = cdo.get("Template")
-        template_path = _game_object_path(template)
-
-        if not template_path:
+        node = index.category_for_ref(cp.get("Category"))
+        if node:
+            return node
+        nxt = path_from_game_object(assets_root, game_path(cdo.get("Template")))
+        if not nxt:
             return None
-
-        next_path = _path_from_game_object(
-            assets_root,
-            template_path,
-        )
-
-        if next_path is None:
-            return None
-
-        current_path = next_path
-
+        current = nxt
     return None
 
 
-def discover_paths(assets_root: Path) -> Iterator[Path]:
-    """Yield JSONs belonging to generated item source families."""
-    for path in discover_json(assets_root):
-        family = family_for_path(path)
-
-        if is_generated_family(family):
-            yield path
-
-
-def discover_items(
-    assets_root: Path,
-    category_index: CategoryIndex,
-) -> Iterator[Item]:
-    """
-    Discover actual item CDOs and classify them by semantic category.
-
-    Category is resolved from the item's own Properties first, then
-    inherited through its Unreal Template chain. The physical
-    Items/<Family>/ directory remains only the fallback family.
-
-    This is important for subclasses such as:
-
-        Fishes/RaidMap/BeardedMullet.json
-            -> Template BaseFish_C
-            -> BaseFish.json
-            -> Category Resources
-
-    It also handles inherited categories for other item families.
-    """
-    for path in discover_paths(assets_root):
-        cdo = load_cdo(path)
-
-        properties = cdo.get("Properties")
-
-        if not isinstance(properties, dict):
-            continue
-
-        name = _string_value(properties.get("Name"))
-
-        if not name:
-            continue
-
-        source_family = family_for_path(path)
-
-        if source_family is None:
-            continue
-
-        category = (
-            _category_from_template(
-                path,
-                properties,
-                category_index,
-                assets_root,
-            )
-            or "Uncategorized"
-        )
-
-        family = classify_item_family(
-            path,
-            category,
-            category_index=category_index,
-        )
-
-        if family is None:
-            continue
-
-        yield Item(
-            path=path,
-            family=family,
-            template=superstruct_name(cdo),
-            category=category,
-            name=name,
-            properties=properties,
-        )
-
-
-def load_broken_relationships(
-    assets_root: Path,
-) -> dict[str, tuple[str, str]]:
-    """
-    Index BrokenItems without treating them as generated item rows.
-    """
-    relationships: dict[str, tuple[str, str]] = {}
-
-    for path in discover_json(assets_root):
-        if family_for_path(path) != "BrokenItems":
-            continue
-
-        properties = load_properties(path)
-
-        damaged = _reference_name(properties.get("DamagedItem"))
-        parent = _reference_name(properties.get("UnbrokenParentItem"))
-
-        if damaged or parent:
-            relationships[path.stem] = (
-                damaged,
-                parent,
-            )
-
-    return relationships
-
-
-def _reference_name(value: Any) -> str:
+def template_name(cdo: dict[str, Any]) -> str:
+    value = cdo.get("Template")
     if isinstance(value, dict):
-        for key in (
-            "ObjectPath",
-            "AssetPathName",
-            "ObjectName",
-        ):
-            candidate = value.get(key)
-
-            if isinstance(candidate, str):
-                value = candidate
-                break
-
+        value = (
+            value.get("ObjectName")
+            or value.get("ObjectPath")
+            or value.get("AssetPathName")
+        )
     if not isinstance(value, str):
         return ""
+    m = re.search(r"'([^']+)'", value)
+    value = m.group(1) if m else value
+    return (
+        value.rsplit("/", 1)[-1]
+        .split(".", 1)[0]
+        .removeprefix("Default__")
+        .removesuffix("_C")
+    )
 
-    value = value.rsplit("/", 1)[-1].split(".", 1)[0]
 
-    value = value.rsplit("'", 1)[-1]
+def discover_items(assets_root: Path, index: CategoryIndex) -> Iterator[Item]:
+    categories_root = (
+        assets_root
+        / "Bellwright"
+        / "Content"
+        / "Mist"
+        / "Data"
+        / "Items"
+        / "Categories"
+    )
+    for path in discover_json(assets_root):
+        try:
+            path.relative_to(categories_root)
+            continue
+        except ValueError:
+            pass
+        cdo = load_cdo(path)
+        props = cdo.get("Properties")
+        if not isinstance(props, dict):
+            continue
+        name = string_value(props.get("Name"))
+        if not name:
+            continue
+        node = template_category(path, props, index, assets_root)
+        if node is None or node.is_group:
+            continue
+        group = index.group_for(node)
+        yield Item(
+            path=path,
+            source_family=source_family(path),
+            template=template_name(cdo),
+            category_key=node.key,
+            category=node.title,
+            category_group_key=group.key if group else None,
+            category_group=group.title if group else None,
+            name=name,
+            properties=props,
+        )
 
-    return value.removesuffix("_C")
+
+def reference_name(value: Any) -> str:
+    ref = game_path(value)
+    if ref:
+        return ref.rsplit("/", 1)[-1].split(".", 1)[0].removesuffix("_C")
+    return ""
+
+
+def load_broken_relationships(assets_root: Path) -> dict[str, tuple[str, str]]:
+    result = {}
+    for path in discover_json(assets_root):
+        if source_family(path).lower() != "brokenitems":
+            continue
+        props = load_properties(path)
+        damaged = reference_name(props.get("DamagedItem"))
+        parent = reference_name(props.get("UnbrokenParentItem"))
+        if damaged or parent:
+            result[path.stem] = (damaged, parent)
+    return result

@@ -1,10 +1,7 @@
-from __future__ import annotations
-
-from ..common import (
+from .common import (
     FieldExtractor,
     asset_reference_name,
     context_field,
-    enum_value,
     field,
     tier,
 )
@@ -20,16 +17,7 @@ FIELDS: dict[str, FieldExtractor] = {
     "Expected Price": field("ExpectedPrice"),
     "Acquisition Hint": field("AcquisitionHint"),
     "Crafting XP": field("ExperienceRewardCrafting"),
-    "Volume": field("Volume"),
-    "Mesh": field("Mesh"),
-    "Carry Animation": field("CarryAnimTypeOverride"),
-    "Nutrition Duration (hours)": field("NutritionDurationHours"),
-    "Health Bonus": field("HealthBonus"),
-    "Health Regen": field("HealthRegen"),
-    "Stamina Bonus": field("StaminaBonus"),
-    "Stamina Regen": field("StaminaRegen"),
-    "Food Type": field("FoodType", transform=enum_value),
-    "Spoilage": field("bEnableSpoilage"),
+    "Damage Type": field("DamageType", transform=asset_reference_name),
+    "Damage": field("Damage"),
     "Broken Version": context_field("damaged_item"),
 }
-CONSUMABLE_FIELDS = FIELDS

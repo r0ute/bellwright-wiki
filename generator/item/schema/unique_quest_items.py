@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .common import FieldExtractor, asset_reference_name, context_field, field, tier
 
 FIELDS: dict[str, FieldExtractor] = {

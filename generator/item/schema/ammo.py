@@ -1,12 +1,8 @@
-from __future__ import annotations
-
-from ..common import (
+from .common import (
     FieldExtractor,
     asset_reference_name,
     context_field,
-    enum_value,
     field,
-    required_skill_value,
     tier,
 )
 
@@ -21,10 +17,8 @@ FIELDS: dict[str, FieldExtractor] = {
     "Expected Price": field("ExpectedPrice"),
     "Acquisition Hint": field("AcquisitionHint"),
     "Crafting XP": field("ExperienceRewardCrafting"),
-    "Armor Slot": field("ArmorSlot", transform=enum_value),
-    "Armor": field("Armor"),
-    "Movement Speed Reduction": field("MovementSpeedReduction"),
-    "Skill Requirements": field("SkillRequirements", transform=required_skill_value),
+    "Damage Type": field("DamageType", transform=asset_reference_name),
+    "Damage": field("Damage"),
+    "Projectile Damage": field("ProjectileDamage"),
     "Broken Version": context_field("damaged_item"),
 }
-EQUIPMENT_FIELDS = FIELDS
